@@ -1,0 +1,290 @@
+syntax = "proto3";
+
+package llm.optimizer.optimization;
+
+import "common.proto";
+import "google/protobuf/timestamp.proto";
+
+// Optimization strategy
+enum OptimizationStrategy {
+  OPTIMIZATION_STRATEGY_UNSPECIFIED = 0;
+  OPTIMIZATION_STRATEGY_AB_TESTING = 1;
+  OPTIMIZATION_STRATEGY_REINFORCEMENT_FEEDBACK = 2;
+  OPTIMIZATION_STRATEGY_COST_PERFORMANCE_SCORING = 3;
+  OPTIMIZATION_STRATEGY_ADAPTIVE_PARAMETER_TUNING = 4;
+  OPTIMIZATION_STRATEGY_THRESHOLD_BASED = 5;
+  OPTIMIZATION_STRATEGY_HYBRID = 6;
+}
+
+// Configuration change type
+enum ChangeType {
+  CHANGE_TYPE_UNSPECIFIED = 0;
+  CHANGE_TYPE_REPLACE = 1;
+  CHANGE_TYPE_ADD = 2;
+  CHANGE_TYPE_REMOVE = 3;
+  CHANGE_TYPE_UPDATE = 4;
+}
+
+// Decision status
+enum DecisionStatus {
+  DECISION_STATUS_UNSPECIFIED = 0;
+  DECISION_STATUS_PENDING = 1;
+  DECISION_STATUS_VALIDATING = 2;
+  DECISION_STATUS_VALIDATION_FAILED = 3;
+  DECISION_STATUS_DEPLOYING = 4;
+  DECISION_STATUS_DEPLOYED = 5;
+  DECISION_STATUS_DEPLOYMENT_FAILED = 6;
+  DECISION_STATUS_MONITORING = 7;
+  DECISION_STATUS_ROLLED_BACK = 8;
+  DECISION_STATUS_COMPLETED = 9;
+  DECISION_STATUS_CANCELLED = 10;
+}
+
+// Configuration change
+message ConfigurationChange {
+  string parameter = 1;
+  string old_value = 2;
+  string new_value = 3;
+  ChangeType change_type = 4;
+}
+
+// Expected impact
+message ExpectedImpact {
+  double cost_reduction_pct = 1;
+  double quality_delta_pct = 2;
+  double latency_delta_pct = 3;
+  double confidence = 4;
+}
+
+// Constraint
+message Constraint {
+  string constraint_type = 1;
+  string value = 2;
+  bool hard = 3;
+}
+
+// Actual impact
+message ActualImpact {
+  double cost_reduction_pct = 1;
+  double quality_delta_pct = 2;
+  double latency_delta_pct = 3;
+  uint64 requests_affected = 4;
+  google.protobuf.Timestamp measured_from = 5;
+  google.protobuf.Timestamp measured_until = 6;
+}
+
+// Optimization decision
+message OptimizationDecision {
+  string id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  OptimizationStrategy strategy = 3;
+  repeated string target_services = 4;
+  repeated ConfigurationChange changes = 5;
+  string rationale = 6;
+  ExpectedImpact expected_impact = 7;
+  repeated Constraint constraints = 8;
+  DecisionStatus status = 9;
+  google.protobuf.Timestamp deployed_at = 10;
+  google.protobuf.Timestamp rolled_back_at = 11;
+  ActualImpact actual_impact = 12;
+  map<string, string> metadata = 13;
+}
+
+// Create optimization request
+message CreateOptimizationRequest {
+  OptimizationStrategy strategy = 1;
+  repeated string target_services = 2;
+  repeated ConfigurationChange changes = 3;
+  string rationale = 4;
+  ExpectedImpact expected_impact = 5;
+  repeated Constraint constraints = 6;
+  bool auto_deploy = 7;
+}
+
+// Create optimization response
+message CreateOptimizationResponse {
+  OptimizationDecision decision = 1;
+  common.ApiResponse status = 2;
+}
+
+// Get optimization request
+message GetOptimizationRequest {
+  string decision_id = 1;
+}
+
+// Get optimization response
+message GetOptimizationResponse {
+  OptimizationDecision decision = 1;
+  common.ApiResponse status = 2;
+}
+
+// List optimizations request
+message ListOptimizationsRequest {
+  repeated DecisionStatus status_filter = 1;
+  repeated OptimizationStrategy strategy_filter = 2;
+  common.TimeRange time_range = 3;
+  common.PageRequest pagination = 4;
+}
+
+// List optimizations response
+message ListOptimizationsResponse {
+  repeated OptimizationDecision decisions = 1;
+  common.PageResponse pagination = 2;
+  common.ApiResponse status = 3;
+}
+
+// Deploy optimization request
+message DeployOptimizationRequest {
+  string decision_id = 1;
+  bool force = 2;
+  bool canary = 3;
+  double canary_percentage = 4;
+}
+
+// Deploy optimization response
+message DeployOptimizationResponse {
+  OptimizationDecision decision = 1;
+  string deployment_id = 2;
+  common.ApiResponse status = 3;
+}
+
+// Rollback optimization request
+message RollbackOptimizationRequest {
+  string decision_id = 1;
+  string reason = 2;
+}
+
+// Rollback optimization response
+message RollbackOptimizationResponse {
+  OptimizationDecision decision = 1;
+  common.ApiResponse status = 2;
+}
+
+// Cancel optimization request
+message CancelOptimizationRequest {
+  string decision_id = 1;
+  string reason = 2;
+}
+
+// Cancel optimization response
+message CancelOptimizationResponse {
+  OptimizationDecision decision = 1;
+  common.ApiResponse status = 2;
+}
+
+// Validate optimization request
+message ValidateOptimizationRequest {
+  string decision_id = 1;
+  bool dry_run = 2;
+}
+
+// Validation result
+message ValidationResult {
+  bool valid = 1;
+  repeated common.ErrorDetail errors = 2;
+  repeated string warnings = 3;
+  ExpectedImpact revised_impact = 4;
+}
+
+// Validate optimization response
+message ValidateOptimizationResponse {
+  ValidationResult validation = 1;
+  common.ApiResponse status = 2;
+}
+
+// Optimization event for streaming
+message OptimizationEvent {
+  string decision_id = 1;
+  DecisionStatus status = 2;
+  string message = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  map<string, string> metadata = 5;
+}
+
+// Subscribe to optimization events request
+message SubscribeOptimizationEventsRequest {
+  repeated string decision_ids = 1;
+  repeated DecisionStatus status_filter = 2;
+}
+
+// Batch create optimizations request (client streaming)
+message BatchCreateOptimizationsRequest {
+  repeated CreateOptimizationRequest requests = 1;
+}
+
+// Batch create optimizations response
+message BatchCreateOptimizationsResponse {
+  repeated OptimizationDecision decisions = 1;
+  int32 successful = 2;
+  int32 failed = 3;
+  common.ApiResponse status = 4;
+}
+
+// Interactive optimization session message
+message OptimizationSessionMessage {
+  oneof message {
+    OptimizationQuery query = 1;
+    OptimizationSuggestion suggestion = 2;
+    OptimizationFeedback feedback = 3;
+    OptimizationSessionControl control = 4;
+  }
+}
+
+// Query for optimization suggestions
+message OptimizationQuery {
+  repeated string target_services = 1;
+  repeated string focus_areas = 2;  // "cost", "performance", "quality"
+  map<string, string> context = 3;
+}
+
+// Optimization suggestion from server
+message OptimizationSuggestion {
+  string suggestion_id = 1;
+  OptimizationDecision proposed_decision = 2;
+  string explanation = 3;
+  double confidence_score = 4;
+  repeated string alternatives = 5;
+}
+
+// Feedback on suggestions
+message OptimizationFeedback {
+  string suggestion_id = 1;
+  bool accepted = 2;
+  string feedback_text = 3;
+  map<string, string> adjustments = 4;
+}
+
+// Session control messages
+message OptimizationSessionControl {
+  enum ControlType {
+    CONTROL_TYPE_UNSPECIFIED = 0;
+    CONTROL_TYPE_START = 1;
+    CONTROL_TYPE_PAUSE = 2;
+    CONTROL_TYPE_RESUME = 3;
+    CONTROL_TYPE_END = 4;
+  }
+
+  ControlType type = 1;
+  string session_id = 2;
+}
+
+// Optimization Service
+service OptimizationService {
+  // Unary RPCs - Standard operations
+  rpc CreateOptimization(CreateOptimizationRequest) returns (CreateOptimizationResponse);
+  rpc GetOptimization(GetOptimizationRequest) returns (GetOptimizationResponse);
+  rpc ListOptimizations(ListOptimizationsRequest) returns (ListOptimizationsResponse);
+  rpc DeployOptimization(DeployOptimizationRequest) returns (DeployOptimizationResponse);
+  rpc RollbackOptimization(RollbackOptimizationRequest) returns (RollbackOptimizationResponse);
+  rpc CancelOptimization(CancelOptimizationRequest) returns (CancelOptimizationResponse);
+  rpc ValidateOptimization(ValidateOptimizationRequest) returns (ValidateOptimizationResponse);
+
+  // Server streaming - Real-time optimization events
+  rpc SubscribeOptimizationEvents(SubscribeOptimizationEventsRequest) returns (stream OptimizationEvent);
+
+  // Client streaming - Batch operations
+  rpc BatchCreateOptimizations(stream CreateOptimizationRequest) returns (BatchCreateOptimizationsResponse);
+
+  // Bidirectional streaming - Interactive optimization sessions
+  rpc OptimizationSession(stream OptimizationSessionMessage) returns (stream OptimizationSessionMessage);
+}

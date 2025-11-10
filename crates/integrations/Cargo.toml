@@ -9,3 +9,40 @@ homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+# Async runtime
+tokio.workspace = true
+async-trait.workspace = true
+futures.workspace = true
+
+# HTTP client
+reqwest.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Rate limiting
+governor = "0.6"
+
+# Cryptography (for webhook signatures)
+sha2 = "0.10"
+
+# Logging
+tracing.workspace = true
+
+# Utilities
+bytes = "1.5"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+wiremock.workspace = true
+mockall.workspace = true
+
+[features]
+default = ["jira", "anthropic"]
+jira = []
+anthropic = []

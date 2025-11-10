@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package llm.optimizer.health;
+
+import "google/protobuf/timestamp.proto";
+
+// Health status
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTH_STATUS_SERVING = 1;
+  HEALTH_STATUS_NOT_SERVING = 2;
+  HEALTH_STATUS_UNKNOWN = 3;
+  HEALTH_STATUS_SERVICE_UNKNOWN = 4;
+}
+
+// Component health
+message ComponentHealth {
+  string name = 1;
+  HealthStatus status = 2;
+  string message = 3;
+  google.protobuf.Timestamp last_check = 4;
+  map<string, string> details = 5;
+}
+
+// System health
+message SystemHealth {
+  HealthStatus overall_status = 1;
+  repeated ComponentHealth components = 2;
+  google.protobuf.Timestamp checked_at = 3;
+  string version = 4;
+  int64 uptime_seconds = 5;
+}
+
+// Health check request
+message HealthCheckRequest {
+  string service = 1;
+}
+
+// Health check response
+message HealthCheckResponse {
+  HealthStatus status = 1;
+}
+
+// Detailed health request
+message DetailedHealthRequest {
+  bool include_components = 1;
+}
+
+// Detailed health response
+message DetailedHealthResponse {
+  SystemHealth health = 1;
+}
+
+// Readiness check request
+message ReadinessCheckRequest {}
+
+// Readiness check response
+message ReadinessCheckResponse {
+  bool ready = 1;
+  repeated string not_ready_reasons = 2;
+}
+
+// Liveness check request
+message LivenessCheckRequest {}
+
+// Liveness check response
+message LivenessCheckResponse {
+  bool alive = 1;
+}
+
+// Health Service (gRPC standard health checking)
+service HealthService {
+  // Standard gRPC health check
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+
+  // Detailed health information
+  rpc DetailedHealth(DetailedHealthRequest) returns (DetailedHealthResponse);
+
+  // Kubernetes readiness probe
+  rpc Readiness(ReadinessCheckRequest) returns (ReadinessCheckResponse);
+
+  // Kubernetes liveness probe
+  rpc Liveness(LivenessCheckRequest) returns (LivenessCheckResponse);
+
+  // Watch health status changes
+  rpc Watch(HealthCheckRequest) returns (stream HealthCheckResponse);
+}

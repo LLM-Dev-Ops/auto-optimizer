@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "llm-optimizer.fullname" . }}-http
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "llm-optimizer.labels" . | nindent 4 }}
+    app.kubernetes.io/component: service
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.http.port }}
+      targetPort: {{ .Values.service.http.targetPort }}
+      protocol: TCP
+      name: http
+      {{- if and (eq .Values.service.type "NodePort") .Values.service.http.nodePort }}
+      nodePort: {{ .Values.service.http.nodePort }}
+      {{- end }}
+    - port: {{ .Values.service.metrics.port }}
+      targetPort: {{ .Values.service.metrics.targetPort }}
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "llm-optimizer.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: service
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "llm-optimizer.fullname" . }}-grpc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "llm-optimizer.labels" . | nindent 4 }}
+    app.kubernetes.io/component: service
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.grpc.port }}
+      targetPort: {{ .Values.service.grpc.targetPort }}
+      protocol: TCP
+      name: grpc
+      {{- if and (eq .Values.service.type "NodePort") .Values.service.grpc.nodePort }}
+      nodePort: {{ .Values.service.grpc.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "llm-optimizer.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: service

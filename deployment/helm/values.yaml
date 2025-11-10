@@ -1,0 +1,446 @@
+# Default values for llm-optimizer Helm chart
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# ============================================================================
+# Global Configuration
+# ============================================================================
+global:
+  # Global image registry
+  imageRegistry: ""
+  # Global image pull secrets
+  imagePullSecrets: []
+  # Global storage class
+  storageClass: ""
+
+# ============================================================================
+# Image Configuration
+# ============================================================================
+image:
+  registry: docker.io
+  repository: llm-auto-optimizer
+  tag: "latest"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# ============================================================================
+# Deployment Configuration
+# ============================================================================
+replicaCount: 2
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# ============================================================================
+# Service Account
+# ============================================================================
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+  automountServiceAccountToken: true
+
+# ============================================================================
+# Pod Security Context
+# ============================================================================
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# ============================================================================
+# Service Configuration
+# ============================================================================
+service:
+  type: ClusterIP
+  http:
+    port: 8080
+    targetPort: http
+    nodePort: null
+  grpc:
+    port: 50051
+    targetPort: grpc
+    nodePort: null
+  metrics:
+    port: 9090
+    targetPort: metrics
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+  labels: {}
+
+# ============================================================================
+# Ingress Configuration
+# ============================================================================
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+  hosts:
+    - host: optimizer.llmdevops.dev
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: http
+  tls:
+    - secretName: llm-optimizer-tls
+      hosts:
+        - optimizer.llmdevops.dev
+
+  # gRPC Ingress
+  grpc:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    hosts:
+      - host: grpc.optimizer.llmdevops.dev
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: llm-optimizer-grpc-tls
+        hosts:
+          - grpc.optimizer.llmdevops.dev
+
+# ============================================================================
+# Resource Limits
+# ============================================================================
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+
+# ============================================================================
+# Autoscaling Configuration
+# ============================================================================
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+
+# ============================================================================
+# Health Checks
+# ============================================================================
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 0
+  periodSeconds: 5
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 30
+
+# ============================================================================
+# Persistent Storage
+# ============================================================================
+persistence:
+  enabled: true
+  storageClass: ""
+  data:
+    size: 10Gi
+    accessMode: ReadWriteOnce
+  logs:
+    size: 5Gi
+    accessMode: ReadWriteOnce
+
+# ============================================================================
+# Application Configuration
+# ============================================================================
+config:
+  service:
+    name: "llm-auto-optimizer"
+    host: "0.0.0.0"
+    port: 8080
+    mode: "standalone"
+    optimizationIntervalSecs: 900
+
+  database:
+    # Connection string provided via secret
+    maxConnections: 50
+    timeoutSecs: 30
+    autoMigrate: false
+
+  integrations:
+    observatoryUrl: "http://llm-observatory.llm-devops.svc.cluster.local:4317"
+    orchestratorUrl: "http://llm-orchestrator.llm-devops.svc.cluster.local:8080"
+    sentinelKafkaBrokers:
+      - "kafka.kafka.svc.cluster.local:9092"
+    governanceUrl: "http://llm-governance.llm-devops.svc.cluster.local:8080"
+    registryUrl: "http://llm-registry.llm-devops.svc.cluster.local:8080"
+
+  strategies:
+    thresholds:
+      latencyP95Ms: 5000.0
+      latencyIncreasePct: 20.0
+      errorRatePct: 5.0
+      costPerRequest: 0.10
+      dailyBudget: 1000.0
+      qualityScoreMin: 0.7
+      qualityDropPct: 10.0
+      psiThreshold: 0.1
+      ksTestPValue: 0.05
+
+    abTesting:
+      minSampleSize: 1000
+      significanceLevel: 0.05
+      maxDurationSeconds: 604800
+      allocationStrategy: "thompson_sampling"
+
+    rl:
+      learningRate: 0.1
+      explorationRate: 0.1
+      discountFactor: 0.95
+      rewardWeights:
+        quality: 0.6
+        cost: 0.3
+        latency: 0.1
+        feedback: 0.0
+
+    costPerformance:
+      mode: "balanced"
+
+  observability:
+    logLevel: "info"
+    jsonLogging: true
+    metricsEndpoint: "http://prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+    tracesEndpoint: "http://jaeger-collector.tracing.svc.cluster.local:14268/api/traces"
+
+# ============================================================================
+# Environment Variables
+# ============================================================================
+env:
+  - name: RUST_LOG
+    value: "info"
+  - name: RUST_BACKTRACE
+    value: "0"
+
+envFrom: []
+
+# ============================================================================
+# Secrets Configuration
+# ============================================================================
+secrets:
+  # Create secret from values
+  create: true
+  # Name of existing secret (if create: false)
+  name: ""
+  # Secret values
+  databaseUrl: "postgres://optimizer:changeme@postgres:5432/optimizer"
+  redisUrl: "redis://:changeme@redis:6379"
+  apiKey: "changeme"
+  jwtSecret: "changeme"
+
+# ============================================================================
+# PostgreSQL Configuration (Bitnami chart)
+# ============================================================================
+postgresql:
+  enabled: true
+  auth:
+    username: optimizer
+    password: optimizer_pass
+    database: optimizer
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+
+# ============================================================================
+# Redis Configuration (Bitnami chart)
+# ============================================================================
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: redis_pass
+  master:
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+# ============================================================================
+# Pod Disruption Budget
+# ============================================================================
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# ============================================================================
+# Network Policy
+# ============================================================================
+networkPolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress: []
+
+# ============================================================================
+# Service Monitor (Prometheus Operator)
+# ============================================================================
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+  labels: {}
+  annotations: {}
+
+# ============================================================================
+# Pod Annotations & Labels
+# ============================================================================
+podAnnotations: {}
+podLabels: {}
+
+# ============================================================================
+# Node Selection
+# ============================================================================
+nodeSelector: {}
+tolerations: []
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - llm-optimizer
+          topologyKey: kubernetes.io/hostname
+
+# ============================================================================
+# Priority & Preemption
+# ============================================================================
+priorityClassName: ""
+
+# ============================================================================
+# Init Containers
+# ============================================================================
+initContainers:
+  - name: wait-for-postgres
+    image: busybox:latest
+    command:
+      - sh
+      - -c
+      - |
+        until nc -z {{ .Release.Name }}-postgresql 5432; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+    securityContext:
+      allowPrivilegeEscalation: false
+      runAsNonRoot: true
+      runAsUser: 1000
+      capabilities:
+        drop:
+          - ALL
+
+# ============================================================================
+# Extra Volumes
+# ============================================================================
+extraVolumes: []
+extraVolumeMounts: []
+
+# ============================================================================
+# Lifecycle Hooks
+# ============================================================================
+lifecycle:
+  preStop:
+    exec:
+      command:
+        - sh
+        - -c
+        - sleep 15
+
+# ============================================================================
+# Termination Grace Period
+# ============================================================================
+terminationGracePeriodSeconds: 30
+
+# ============================================================================
+# DNS Configuration
+# ============================================================================
+dnsPolicy: ClusterFirst
+dnsConfig: {}

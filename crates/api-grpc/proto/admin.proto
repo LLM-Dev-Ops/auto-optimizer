@@ -1,0 +1,314 @@
+syntax = "proto3";
+
+package llm.optimizer.admin;
+
+import "common.proto";
+import "google/protobuf/timestamp.proto";
+
+// System statistics
+message SystemStats {
+  double cpu_usage_pct = 1;
+  uint64 memory_used_bytes = 2;
+  uint64 memory_total_bytes = 3;
+  uint64 disk_used_bytes = 4;
+  uint64 disk_total_bytes = 5;
+  uint64 goroutines = 6;
+  uint64 open_connections = 7;
+  google.protobuf.Timestamp collected_at = 8;
+}
+
+// Service info
+message ServiceInfo {
+  string name = 1;
+  string version = 2;
+  string build_time = 3;
+  string git_commit = 4;
+  google.protobuf.Timestamp started_at = 5;
+  int64 uptime_seconds = 6;
+  common.DeploymentMode mode = 7;
+  map<string, string> environment = 8;
+}
+
+// Database statistics
+message DatabaseStats {
+  string database_type = 1;
+  uint64 total_connections = 2;
+  uint64 active_connections = 3;
+  uint64 idle_connections = 4;
+  uint64 total_queries = 5;
+  double avg_query_time_ms = 6;
+  uint64 slow_queries = 7;
+}
+
+// Cache statistics
+message CacheStats {
+  string cache_name = 1;
+  uint64 total_entries = 2;
+  uint64 hit_count = 3;
+  uint64 miss_count = 4;
+  double hit_rate = 5;
+  uint64 eviction_count = 6;
+  uint64 size_bytes = 7;
+}
+
+// Get system stats request
+message GetSystemStatsRequest {}
+
+// Get system stats response
+message GetSystemStatsResponse {
+  SystemStats stats = 1;
+  common.ApiResponse status = 2;
+}
+
+// Get service info request
+message GetServiceInfoRequest {}
+
+// Get service info response
+message GetServiceInfoResponse {
+  ServiceInfo info = 1;
+  common.ApiResponse status = 2;
+}
+
+// Get database stats request
+message GetDatabaseStatsRequest {}
+
+// Get database stats response
+message GetDatabaseStatsResponse {
+  DatabaseStats stats = 1;
+  common.ApiResponse status = 2;
+}
+
+// Get cache stats request
+message GetCacheStatsRequest {
+  string cache_name = 1;
+}
+
+// Get cache stats response
+message GetCacheStatsResponse {
+  repeated CacheStats stats = 1;
+  common.ApiResponse status = 2;
+}
+
+// Log level
+enum LogLevel {
+  LOG_LEVEL_UNSPECIFIED = 0;
+  LOG_LEVEL_TRACE = 1;
+  LOG_LEVEL_DEBUG = 2;
+  LOG_LEVEL_INFO = 3;
+  LOG_LEVEL_WARN = 4;
+  LOG_LEVEL_ERROR = 5;
+}
+
+// Set log level request
+message SetLogLevelRequest {
+  LogLevel level = 1;
+  string module = 2;  // Optional: specific module
+}
+
+// Set log level response
+message SetLogLevelResponse {
+  LogLevel previous_level = 1;
+  LogLevel new_level = 2;
+  common.ApiResponse status = 3;
+}
+
+// Clear cache request
+message ClearCacheRequest {
+  string cache_name = 1;
+  bool all_caches = 2;
+}
+
+// Clear cache response
+message ClearCacheResponse {
+  int32 entries_cleared = 1;
+  common.ApiResponse status = 2;
+}
+
+// Trigger garbage collection request
+message TriggerGCRequest {}
+
+// Trigger garbage collection response
+message TriggerGCResponse {
+  uint64 memory_freed_bytes = 1;
+  common.ApiResponse status = 2;
+}
+
+// Database migration
+message DatabaseMigration {
+  int32 version = 1;
+  string name = 2;
+  google.protobuf.Timestamp applied_at = 3;
+  int64 execution_time_ms = 4;
+}
+
+// Get migrations request
+message GetMigrationsRequest {}
+
+// Get migrations response
+message GetMigrationsResponse {
+  repeated DatabaseMigration migrations = 1;
+  int32 current_version = 2;
+  int32 latest_version = 3;
+  common.ApiResponse status = 4;
+}
+
+// Run migrations request
+message RunMigrationsRequest {
+  int32 target_version = 1;  // 0 for latest
+}
+
+// Run migrations response
+message RunMigrationsResponse {
+  int32 previous_version = 1;
+  int32 new_version = 2;
+  repeated DatabaseMigration applied = 3;
+  common.ApiResponse status = 4;
+}
+
+// Rollback migrations request
+message RollbackMigrationsRequest {
+  int32 target_version = 1;
+}
+
+// Rollback migrations response
+message RollbackMigrationsResponse {
+  int32 previous_version = 1;
+  int32 new_version = 2;
+  repeated int32 rolled_back = 3;
+  common.ApiResponse status = 4;
+}
+
+// Graceful shutdown request
+message GracefulShutdownRequest {
+  int32 timeout_seconds = 1;
+  string reason = 2;
+}
+
+// Graceful shutdown response
+message GracefulShutdownResponse {
+  bool initiated = 1;
+  google.protobuf.Timestamp shutdown_at = 2;
+  common.ApiResponse status = 3;
+}
+
+// Reload configuration request
+message ReloadConfigRequest {}
+
+// Reload configuration response
+message ReloadConfigResponse {
+  bool reloaded = 1;
+  repeated string changes = 2;
+  common.ApiResponse status = 3;
+}
+
+// Feature flag
+message FeatureFlag {
+  string name = 1;
+  bool enabled = 2;
+  string description = 3;
+  map<string, string> metadata = 4;
+}
+
+// List feature flags request
+message ListFeatureFlagsRequest {}
+
+// List feature flags response
+message ListFeatureFlagsResponse {
+  repeated FeatureFlag flags = 1;
+  common.ApiResponse status = 2;
+}
+
+// Set feature flag request
+message SetFeatureFlagRequest {
+  string name = 1;
+  bool enabled = 2;
+}
+
+// Set feature flag response
+message SetFeatureFlagResponse {
+  FeatureFlag flag = 1;
+  common.ApiResponse status = 2;
+}
+
+// Background job
+message BackgroundJob {
+  string id = 1;
+  string name = 2;
+  string status = 3;  // "running", "completed", "failed", "cancelled"
+  google.protobuf.Timestamp started_at = 4;
+  google.protobuf.Timestamp completed_at = 5;
+  int32 progress_pct = 6;
+  string message = 7;
+  map<string, string> metadata = 8;
+}
+
+// List background jobs request
+message ListBackgroundJobsRequest {
+  repeated string status_filter = 1;
+}
+
+// List background jobs response
+message ListBackgroundJobsResponse {
+  repeated BackgroundJob jobs = 1;
+  common.ApiResponse status = 2;
+}
+
+// Cancel background job request
+message CancelBackgroundJobRequest {
+  string job_id = 1;
+}
+
+// Cancel background job response
+message CancelBackgroundJobResponse {
+  BackgroundJob job = 1;
+  common.ApiResponse status = 2;
+}
+
+// System event
+message SystemEvent {
+  string event_type = 1;
+  string severity = 2;
+  string message = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  map<string, string> metadata = 5;
+}
+
+// Subscribe to system events request
+message SubscribeSystemEventsRequest {
+  repeated string event_types = 1;
+  string severity_min = 2;
+}
+
+// Admin Service
+service AdminService {
+  // System monitoring
+  rpc GetSystemStats(GetSystemStatsRequest) returns (GetSystemStatsResponse);
+  rpc GetServiceInfo(GetServiceInfoRequest) returns (GetServiceInfoResponse);
+  rpc GetDatabaseStats(GetDatabaseStatsRequest) returns (GetDatabaseStatsResponse);
+  rpc GetCacheStats(GetCacheStatsRequest) returns (GetCacheStatsResponse);
+
+  // Runtime configuration
+  rpc SetLogLevel(SetLogLevelRequest) returns (SetLogLevelResponse);
+  rpc ClearCache(ClearCacheRequest) returns (ClearCacheResponse);
+  rpc TriggerGC(TriggerGCRequest) returns (TriggerGCResponse);
+  rpc ReloadConfig(ReloadConfigRequest) returns (ReloadConfigResponse);
+
+  // Database management
+  rpc GetMigrations(GetMigrationsRequest) returns (GetMigrationsResponse);
+  rpc RunMigrations(RunMigrationsRequest) returns (RunMigrationsResponse);
+  rpc RollbackMigrations(RollbackMigrationsRequest) returns (RollbackMigrationsResponse);
+
+  // Feature flags
+  rpc ListFeatureFlags(ListFeatureFlagsRequest) returns (ListFeatureFlagsResponse);
+  rpc SetFeatureFlag(SetFeatureFlagRequest) returns (SetFeatureFlagResponse);
+
+  // Background jobs
+  rpc ListBackgroundJobs(ListBackgroundJobsRequest) returns (ListBackgroundJobsResponse);
+  rpc CancelBackgroundJob(CancelBackgroundJobRequest) returns (CancelBackgroundJobResponse);
+
+  // Lifecycle management
+  rpc GracefulShutdown(GracefulShutdownRequest) returns (GracefulShutdownResponse);
+
+  // Server streaming - System events
+  rpc SubscribeSystemEvents(SubscribeSystemEventsRequest) returns (stream SystemEvent);
+}

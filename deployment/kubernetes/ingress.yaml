@@ -1,0 +1,105 @@
+---
+# Ingress for HTTP traffic
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: llm-optimizer-http
+  namespace: llm-optimizer
+  labels:
+    app.kubernetes.io/name: llm-optimizer
+    app.kubernetes.io/component: ingress
+  annotations:
+    # Nginx Ingress Controller annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/limit-rpm: "5000"
+
+    # CORS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+
+    # Connection settings
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+    # Load balancing
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
+    nginx.ingress.kubernetes.io/load-balance: "ewma"
+
+    # Health checks
+    nginx.ingress.kubernetes.io/healthcheck-path: "/health"
+    nginx.ingress.kubernetes.io/healthcheck-interval: "10s"
+
+    # TLS settings
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - optimizer.llmdevops.dev
+        - api.optimizer.llmdevops.dev
+      secretName: llm-optimizer-tls
+  rules:
+    - host: optimizer.llmdevops.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: llm-optimizer-http
+                port:
+                  name: http
+
+    - host: api.optimizer.llmdevops.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: llm-optimizer-http
+                port:
+                  name: http
+
+---
+# Ingress for gRPC traffic
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: llm-optimizer-grpc
+  namespace: llm-optimizer
+  labels:
+    app.kubernetes.io/name: llm-optimizer
+    app.kubernetes.io/component: ingress
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/grpc-backend: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - grpc.optimizer.llmdevops.dev
+      secretName: llm-optimizer-grpc-tls
+  rules:
+    - host: grpc.optimizer.llmdevops.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: llm-optimizer-grpc
+                port:
+                  name: grpc

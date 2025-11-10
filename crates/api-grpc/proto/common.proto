@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package llm.optimizer.common;
+
+import "google/protobuf/timestamp.proto";
+
+// Common timestamp type
+message Timestamp {
+  google.protobuf.Timestamp value = 1;
+}
+
+// UUID type
+message Uuid {
+  string value = 1;  // Standard UUID format (8-4-4-4-12)
+}
+
+// Pagination request
+message PageRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string sort_by = 3;
+  bool ascending = 4;
+}
+
+// Pagination response
+message PageResponse {
+  int32 total_items = 1;
+  int32 total_pages = 2;
+  int32 current_page = 3;
+  int32 page_size = 4;
+}
+
+// Generic key-value metadata
+message Metadata {
+  map<string, string> tags = 1;
+}
+
+// API response status
+enum ResponseStatus {
+  RESPONSE_STATUS_UNSPECIFIED = 0;
+  RESPONSE_STATUS_SUCCESS = 1;
+  RESPONSE_STATUS_PARTIAL_SUCCESS = 2;
+  RESPONSE_STATUS_ERROR = 3;
+}
+
+// Error detail
+message ErrorDetail {
+  string code = 1;
+  string message = 2;
+  string field = 3;
+  map<string, string> metadata = 4;
+}
+
+// Generic API response
+message ApiResponse {
+  ResponseStatus status = 1;
+  string message = 2;
+  repeated ErrorDetail errors = 3;
+}
+
+// Time range filter
+message TimeRange {
+  google.protobuf.Timestamp start = 1;
+  google.protobuf.Timestamp end = 2;
+}
+
+// Event source enum
+enum EventSource {
+  EVENT_SOURCE_UNSPECIFIED = 0;
+  EVENT_SOURCE_OBSERVATORY = 1;
+  EVENT_SOURCE_SENTINEL = 2;
+  EVENT_SOURCE_USER = 3;
+  EVENT_SOURCE_SYSTEM = 4;
+  EVENT_SOURCE_GOVERNANCE = 5;
+}
+
+// Event type enum
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_METRIC = 1;
+  EVENT_TYPE_ANOMALY = 2;
+  EVENT_TYPE_FEEDBACK = 3;
+  EVENT_TYPE_PERFORMANCE_ALERT = 4;
+  EVENT_TYPE_COST_ALERT = 5;
+  EVENT_TYPE_QUALITY_ALERT = 6;
+}
+
+// Deployment mode
+enum DeploymentMode {
+  DEPLOYMENT_MODE_UNSPECIFIED = 0;
+  DEPLOYMENT_MODE_SIDECAR = 1;
+  DEPLOYMENT_MODE_STANDALONE = 2;
+  DEPLOYMENT_MODE_DAEMON = 3;
+}
+
+// JSON value representation for flexible data
+message JsonValue {
+  oneof kind {
+    google.protobuf.NullValue null_value = 1;
+    double number_value = 2;
+    string string_value = 3;
+    bool bool_value = 4;
+    JsonObject object_value = 5;
+    JsonArray array_value = 6;
+  }
+}
+
+message JsonObject {
+  map<string, JsonValue> fields = 1;
+}
+
+message JsonArray {
+  repeated JsonValue values = 1;
+}
+
+// Import google null value
+import "google/protobuf/struct.proto";

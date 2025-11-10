@@ -1,0 +1,68 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llm-optimizer-config
+  namespace: llm-optimizer
+  labels:
+    app.kubernetes.io/name: llm-optimizer
+    app.kubernetes.io/component: configuration
+data:
+  config.yaml: |
+    service:
+      name: "llm-auto-optimizer"
+      host: "0.0.0.0"
+      port: 8080
+      mode: "standalone"
+      optimization_interval_secs: 900
+
+    database:
+      # Connection string is provided via secret
+      max_connections: 50
+      timeout_secs: 30
+      auto_migrate: false
+
+    integrations:
+      observatory_url: http://llm-observatory.llm-devops.svc.cluster.local:4317
+      orchestrator_url: http://llm-orchestrator.llm-devops.svc.cluster.local:8080
+      sentinel_kafka_brokers:
+        - kafka.kafka.svc.cluster.local:9092
+      governance_url: http://llm-governance.llm-devops.svc.cluster.local:8080
+      registry_url: http://llm-registry.llm-devops.svc.cluster.local:8080
+
+    strategies:
+      thresholds:
+        latency_p95_ms: 5000.0
+        latency_increase_pct: 20.0
+        error_rate_pct: 5.0
+        cost_per_request: 0.10
+        daily_budget: 1000.0
+        quality_score_min: 0.7
+        quality_drop_pct: 10.0
+        psi_threshold: 0.1
+        ks_test_p_value: 0.05
+
+      ab_testing:
+        min_sample_size: 1000
+        significance_level: 0.05
+        max_duration_seconds: 604800
+        allocation_strategy: "thompson_sampling"
+
+      rl:
+        learning_rate: 0.1
+        exploration_rate: 0.1
+        discount_factor: 0.95
+        reward_weights:
+          quality: 0.6
+          cost: 0.3
+          latency: 0.1
+          feedback: 0.0
+
+      cost_performance:
+        mode: "balanced"
+
+    observability:
+      log_level: "info"
+      json_logging: true
+      metrics_endpoint: http://prometheus.monitoring.svc.cluster.local:9090/api/v1/write
+      traces_endpoint: http://jaeger-collector.tracing.svc.cluster.local:14268/api/traces

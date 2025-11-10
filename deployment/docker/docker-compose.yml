@@ -1,0 +1,322 @@
+# Docker Compose for Development Environment
+# Includes all services needed for local development and testing
+
+version: '3.8'
+
+services:
+  # ============================================================================
+  # LLM Auto Optimizer Service
+  # ============================================================================
+  optimizer:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.service
+      args:
+        - BUILD_MODE=debug
+    container_name: llm-auto-optimizer
+    hostname: optimizer
+    ports:
+      - "8080:8080"      # REST API
+      - "50051:50051"    # gRPC API
+      - "9090:9090"      # Metrics
+    environment:
+      # Service configuration
+      - RUST_LOG=debug
+      - RUST_BACKTRACE=1
+      - OPTIMIZER_SERVICE__HOST=0.0.0.0
+      - OPTIMIZER_SERVICE__PORT=8080
+      - OPTIMIZER_SERVICE__MODE=standalone
+
+      # Database configuration
+      - OPTIMIZER_DATABASE__CONNECTION_STRING=postgres://optimizer:optimizer_pass@postgres:5432/optimizer
+      - OPTIMIZER_DATABASE__MAX_CONNECTIONS=10
+      - OPTIMIZER_DATABASE__AUTO_MIGRATE=true
+
+      # Redis configuration
+      - REDIS_URL=redis://redis:6379
+
+      # Kafka configuration
+      - KAFKA_BROKERS=kafka:9092
+
+      # Observability
+      - OPTIMIZER_OBSERVABILITY__LOG_LEVEL=debug
+      - OPTIMIZER_OBSERVABILITY__JSON_LOGGING=false
+      - OPTIMIZER_OBSERVABILITY__METRICS_ENDPOINT=http://prometheus:9090/api/v1/write
+      - OPTIMIZER_OBSERVABILITY__TRACES_ENDPOINT=http://jaeger:14268/api/traces
+    volumes:
+      - optimizer-data:/app/data
+      - optimizer-logs:/app/logs
+      - ../../config.example.yaml:/app/config/config.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - llm-devops
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ============================================================================
+  # PostgreSQL Database
+  # ============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: llm-optimizer-postgres
+    hostname: postgres
+    environment:
+      - POSTGRES_USER=optimizer
+      - POSTGRES_PASSWORD=optimizer_pass
+      - POSTGRES_DB=optimizer
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - llm-devops
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U optimizer -d optimizer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ============================================================================
+  # Redis Cache
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: llm-optimizer-redis
+    hostname: redis
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --loglevel notice
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - llm-devops
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # ============================================================================
+  # Kafka Message Broker
+  # ============================================================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: llm-optimizer-zookeeper
+    hostname: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+    networks:
+      - llm-devops
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: llm-optimizer-kafka
+    hostname: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9101:9101"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - llm-devops
+
+  # ============================================================================
+  # Monitoring Stack
+  # ============================================================================
+
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: llm-optimizer-prometheus
+    hostname: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9091:9090"
+    restart: unless-stopped
+    networks:
+      - llm-devops
+
+  # Grafana - Metrics visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: llm-optimizer-grafana
+    hostname: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=redis-datasource,grafana-clock-panel
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../monitoring/grafana-dashboard.json:/etc/grafana/provisioning/dashboards/optimizer.json:ro
+      - ../monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - llm-devops
+
+  # Jaeger - Distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: llm-optimizer-jaeger
+    hostname: jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # UI
+      - "14268:14268"  # HTTP collector
+      - "14250:14250"  # gRPC collector
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    networks:
+      - llm-devops
+
+  # ============================================================================
+  # Admin Tools
+  # ============================================================================
+
+  # Redis Commander - Web UI for Redis
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: llm-optimizer-redis-commander
+    hostname: redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+      - HTTP_USER=admin
+      - HTTP_PASSWORD=admin
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - llm-devops
+
+  # pgAdmin - Web UI for PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: llm-optimizer-pgadmin
+    hostname: pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@llmdevops.dev
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - llm-devops
+
+  # Kafka UI - Web UI for Kafka
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: llm-optimizer-kafka-ui
+    hostname: kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8082:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+    networks:
+      - llm-devops
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  optimizer-data:
+    driver: local
+  optimizer-logs:
+    driver: local
+  pgadmin-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  kafka-data:
+    driver: local
+  zookeeper-data:
+    driver: local
+  zookeeper-logs:
+    driver: local
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  llm-devops:
+    name: llm-devops
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

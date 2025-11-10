@@ -1,0 +1,315 @@
+syntax = "proto3";
+
+package llm.optimizer.metrics;
+
+import "common.proto";
+import "google/protobuf/timestamp.proto";
+
+// Aggregation type
+enum AggregationType {
+  AGGREGATION_TYPE_UNSPECIFIED = 0;
+  AGGREGATION_TYPE_SUM = 1;
+  AGGREGATION_TYPE_AVERAGE = 2;
+  AGGREGATION_TYPE_MIN = 3;
+  AGGREGATION_TYPE_MAX = 4;
+  AGGREGATION_TYPE_COUNT = 5;
+  AGGREGATION_TYPE_HISTOGRAM = 6;
+  AGGREGATION_TYPE_PERCENTILE = 7;
+}
+
+// Percentile value
+message Percentile {
+  int32 percentile = 1;  // e.g., 50, 95, 99
+  double value = 2;
+}
+
+// Metric aggregation
+message MetricAggregation {
+  AggregationType aggregation_type = 1;
+  uint64 count = 2;
+  double sum = 3;
+  double min = 4;
+  double max = 5;
+  repeated Percentile percentiles = 6;
+}
+
+// Metric point
+message MetricPoint {
+  string name = 1;
+  double value = 2;
+  string unit = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  map<string, string> tags = 5;
+  MetricAggregation aggregation = 6;
+}
+
+// Performance metrics
+message PerformanceMetrics {
+  double avg_latency_ms = 1;
+  double p50_latency_ms = 2;
+  double p95_latency_ms = 3;
+  double p99_latency_ms = 4;
+  double error_rate = 5;
+  double throughput_qps = 6;
+  uint64 total_requests = 7;
+  google.protobuf.Timestamp period_start = 8;
+  google.protobuf.Timestamp period_end = 9;
+}
+
+// Cost metrics
+message CostMetrics {
+  double total_cost = 1;
+  double avg_cost_per_request = 2;
+  uint64 total_tokens = 3;
+  uint64 input_tokens = 4;
+  uint64 output_tokens = 5;
+  google.protobuf.Timestamp period_start = 6;
+  google.protobuf.Timestamp period_end = 7;
+  map<string, double> cost_breakdown = 8;
+}
+
+// Quality metrics
+message QualityMetrics {
+  double overall_score = 1;
+  double accuracy = 2;
+  double relevance = 3;
+  double coherence = 4;
+  double user_satisfaction = 5;
+  google.protobuf.Timestamp period_start = 6;
+  google.protobuf.Timestamp period_end = 7;
+}
+
+// Composite metrics summary
+message MetricsSummary {
+  PerformanceMetrics performance = 1;
+  CostMetrics cost = 2;
+  QualityMetrics quality = 3;
+  google.protobuf.Timestamp computed_at = 4;
+}
+
+// Get metrics request
+message GetMetricsRequest {
+  repeated string metric_names = 1;
+  repeated string services = 2;
+  common.TimeRange time_range = 3;
+  AggregationType aggregation = 4;
+  map<string, string> tag_filters = 5;
+}
+
+// Get metrics response
+message GetMetricsResponse {
+  repeated MetricPoint metrics = 1;
+  common.ApiResponse status = 2;
+}
+
+// Get performance metrics request
+message GetPerformanceMetricsRequest {
+  repeated string services = 1;
+  common.TimeRange time_range = 2;
+  string granularity = 3;  // "1m", "5m", "1h", "1d"
+}
+
+// Get performance metrics response
+message GetPerformanceMetricsResponse {
+  PerformanceMetrics metrics = 1;
+  common.ApiResponse status = 2;
+}
+
+// Get cost metrics request
+message GetCostMetricsRequest {
+  repeated string services = 1;
+  common.TimeRange time_range = 2;
+  string granularity = 3;
+}
+
+// Get cost metrics response
+message GetCostMetricsResponse {
+  CostMetrics metrics = 1;
+  common.ApiResponse status = 2;
+}
+
+// Get quality metrics request
+message GetQualityMetricsRequest {
+  repeated string services = 1;
+  common.TimeRange time_range = 2;
+  string granularity = 3;
+}
+
+// Get quality metrics response
+message GetQualityMetricsResponse {
+  QualityMetrics metrics = 1;
+  common.ApiResponse status = 2;
+}
+
+// Get metrics summary request
+message GetMetricsSummaryRequest {
+  repeated string services = 1;
+  common.TimeRange time_range = 2;
+}
+
+// Get metrics summary response
+message GetMetricsSummaryResponse {
+  MetricsSummary summary = 1;
+  common.ApiResponse status = 2;
+}
+
+// Query metrics request
+message QueryMetricsRequest {
+  string query = 1;  // PromQL-like query language
+  common.TimeRange time_range = 2;
+  string step = 3;  // Time step for range queries
+}
+
+// Query metrics response
+message QueryMetricsResponse {
+  repeated MetricPoint results = 1;
+  common.ApiResponse status = 2;
+}
+
+// Subscribe to metrics request
+message SubscribeMetricsRequest {
+  repeated string metric_names = 1;
+  repeated string services = 2;
+  map<string, string> tag_filters = 3;
+  int32 interval_secs = 4;
+}
+
+// Metric event for streaming
+message MetricEvent {
+  MetricPoint metric = 1;
+  google.protobuf.Timestamp timestamp = 2;
+}
+
+// Subscribe to performance metrics request
+message SubscribePerformanceMetricsRequest {
+  repeated string services = 1;
+  int32 interval_secs = 2;
+}
+
+// Performance metrics event
+message PerformanceMetricsEvent {
+  PerformanceMetrics metrics = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  string service = 3;
+}
+
+// Subscribe to cost metrics request
+message SubscribeCostMetricsRequest {
+  repeated string services = 1;
+  int32 interval_secs = 2;
+}
+
+// Cost metrics event
+message CostMetricsEvent {
+  CostMetrics metrics = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  string service = 3;
+}
+
+// Subscribe to alerts request
+message SubscribeAlertsRequest {
+  repeated string alert_types = 1;  // "performance", "cost", "quality"
+  repeated string services = 2;
+  string severity_min = 3;  // "info", "warning", "error", "critical"
+}
+
+// Alert severity
+enum AlertSeverity {
+  ALERT_SEVERITY_UNSPECIFIED = 0;
+  ALERT_SEVERITY_INFO = 1;
+  ALERT_SEVERITY_WARNING = 2;
+  ALERT_SEVERITY_ERROR = 3;
+  ALERT_SEVERITY_CRITICAL = 4;
+}
+
+// Alert event
+message AlertEvent {
+  string alert_id = 1;
+  string alert_type = 2;
+  AlertSeverity severity = 3;
+  string service = 4;
+  string title = 5;
+  string description = 6;
+  MetricPoint trigger_metric = 7;
+  google.protobuf.Timestamp timestamp = 8;
+  map<string, string> metadata = 9;
+}
+
+// Record metrics request (client streaming)
+message RecordMetricsRequest {
+  repeated MetricPoint metrics = 1;
+}
+
+// Record metrics response
+message RecordMetricsResponse {
+  int32 recorded = 1;
+  int32 failed = 2;
+  common.ApiResponse status = 3;
+}
+
+// Export metrics request
+message ExportMetricsRequest {
+  repeated string metric_names = 1;
+  repeated string services = 2;
+  common.TimeRange time_range = 3;
+  string format = 4;  // "json", "csv", "prometheus"
+}
+
+// Export metrics response
+message ExportMetricsResponse {
+  bytes data = 1;
+  string format = 2;
+  common.ApiResponse status = 3;
+}
+
+// Metrics analytics request
+message GetMetricsAnalyticsRequest {
+  repeated string services = 1;
+  common.TimeRange time_range = 2;
+  repeated string dimensions = 3;  // "service", "model", "region", etc.
+}
+
+// Metrics analytics data
+message MetricsAnalytics {
+  map<string, double> cost_by_dimension = 1;
+  map<string, double> latency_by_dimension = 2;
+  map<string, double> error_rate_by_dimension = 3;
+  map<string, uint64> request_count_by_dimension = 4;
+  repeated Trend trends = 5;
+}
+
+// Trend analysis
+message Trend {
+  string metric_name = 1;
+  string direction = 2;  // "increasing", "decreasing", "stable"
+  double change_pct = 3;
+  double confidence = 4;
+}
+
+// Get metrics analytics response
+message GetMetricsAnalyticsResponse {
+  MetricsAnalytics analytics = 1;
+  common.ApiResponse status = 2;
+}
+
+// Metrics Service
+service MetricsService {
+  // Unary RPCs - Standard operations
+  rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse);
+  rpc GetPerformanceMetrics(GetPerformanceMetricsRequest) returns (GetPerformanceMetricsResponse);
+  rpc GetCostMetrics(GetCostMetricsRequest) returns (GetCostMetricsResponse);
+  rpc GetQualityMetrics(GetQualityMetricsRequest) returns (GetQualityMetricsResponse);
+  rpc GetMetricsSummary(GetMetricsSummaryRequest) returns (GetMetricsSummaryResponse);
+  rpc QueryMetrics(QueryMetricsRequest) returns (QueryMetricsResponse);
+  rpc ExportMetrics(ExportMetricsRequest) returns (ExportMetricsResponse);
+  rpc GetMetricsAnalytics(GetMetricsAnalyticsRequest) returns (GetMetricsAnalyticsResponse);
+
+  // Server streaming - Real-time metrics
+  rpc SubscribeMetrics(SubscribeMetricsRequest) returns (stream MetricEvent);
+  rpc SubscribePerformanceMetrics(SubscribePerformanceMetricsRequest) returns (stream PerformanceMetricsEvent);
+  rpc SubscribeCostMetrics(SubscribeCostMetricsRequest) returns (stream CostMetricsEvent);
+  rpc SubscribeAlerts(SubscribeAlertsRequest) returns (stream AlertEvent);
+
+  // Client streaming - Batch metric recording
+  rpc RecordMetrics(stream RecordMetricsRequest) returns (RecordMetricsResponse);
+}

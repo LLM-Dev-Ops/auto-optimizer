@@ -1,0 +1,86 @@
+[package]
+name = "api-tests"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Internal crates
+llm-optimizer-types = { workspace = true }
+llm-optimizer-processor = { workspace = true }
+llm-optimizer-analyzer = { workspace = true }
+llm-optimizer-decision = { workspace = true }
+llm-optimizer-actuator = { workspace = true }
+llm-optimizer-storage = { workspace = true }
+llm-optimizer-config = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true, features = ["full"] }
+async-trait.workspace = true
+futures.workspace = true
+
+# HTTP & gRPC
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+axum = { workspace = true, features = ["macros"] }
+tower.workspace = true
+tower-http.workspace = true
+tonic = { workspace = true, features = ["tls", "gzip"] }
+prost.workspace = true
+hyper = "1.4"
+hyper-util = "0.1"
+
+# Serialization
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Testing utilities
+mockall.workspace = true
+wiremock.workspace = true
+tempfile.workspace = true
+
+# Security testing
+jsonwebtoken = "9.3"
+rand.workspace = true
+
+# Utilities
+uuid = { workspace = true, features = ["v4", "serde"] }
+chrono = { workspace = true, features = ["serde"] }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# Rate limiting
+governor.workspace = true
+
+# Encoding
+hex = "0.4"
+
+[dev-dependencies]
+criterion = { workspace = true, features = ["async_tokio", "html_reports"] }
+tokio-test = "0.4"
+
+[build-dependencies]
+tonic-build.workspace = true
+
+[[bench]]
+name = "latency_bench"
+harness = false
+
+[[bench]]
+name = "load_test"
+harness = false
+
+[[bench]]
+name = "streaming_bench"
+harness = false
+
+[lib]
+name = "api_tests"
+path = "src/lib.rs"

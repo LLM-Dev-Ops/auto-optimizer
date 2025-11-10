@@ -1,0 +1,16 @@
+---
+# Pod Disruption Budget for LLM Optimizer
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: llm-optimizer
+  namespace: llm-optimizer
+  labels:
+    app.kubernetes.io/name: llm-optimizer
+    app.kubernetes.io/component: availability
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: llm-optimizer
+      app.kubernetes.io/component: service

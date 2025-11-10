@@ -1,0 +1,71 @@
+# Multi-stage Dockerfile for LLM Auto Optimizer CLI
+# Optimized for small image size and fast builds
+
+# ============================================================================
+# Stage 1: Builder - Compile Rust CLI
+# ============================================================================
+FROM rust:1.75-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy manifest files
+COPY Cargo.toml Cargo.lock ./
+COPY crates/ ./crates/
+
+# Build the CLI
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/build/target \
+    cargo build --release -p cli \
+    && cp target/release/llm-optimizer-cli /tmp/llm-optimizer-cli || \
+    (find target/release -maxdepth 1 -type f -executable -name "*cli*" | head -1 | xargs -I {} cp {} /tmp/llm-optimizer-cli)
+
+# ============================================================================
+# Stage 2: Runtime - Minimal CLI image
+# ============================================================================
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user
+RUN groupadd -r optimizer -g 1000 && \
+    useradd -r -g optimizer -u 1000 -m -s /bin/bash optimizer
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /tmp/llm-optimizer-cli /usr/local/bin/llm-optimizer
+RUN chmod +x /usr/local/bin/llm-optimizer
+
+# Copy default configuration
+COPY config.example.yaml /app/config.yaml
+
+# Set ownership
+RUN chown -R optimizer:optimizer /app
+
+# Switch to non-root user
+USER optimizer
+
+# Add labels
+LABEL maintainer="LLM DevOps Contributors"
+LABEL version="0.1.0"
+LABEL description="LLM Auto Optimizer CLI"
+
+# Environment variables
+ENV RUST_LOG=info \
+    CONFIG_PATH=/app/config.yaml
+
+# Default command shows help
+ENTRYPOINT ["/usr/local/bin/llm-optimizer"]
+CMD ["--help"]

@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "llm-optimizer.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "llm-optimizer.labels" . | nindent 4 }}
+    app.kubernetes.io/component: configuration
+data:
+  config.yaml: |
+    service:
+      name: {{ .Values.config.service.name | quote }}
+      host: {{ .Values.config.service.host | quote }}
+      port: {{ .Values.config.service.port }}
+      mode: {{ .Values.config.service.mode | quote }}
+      optimization_interval_secs: {{ .Values.config.service.optimizationIntervalSecs }}
+
+    database:
+      max_connections: {{ .Values.config.database.maxConnections }}
+      timeout_secs: {{ .Values.config.database.timeoutSecs }}
+      auto_migrate: {{ .Values.config.database.autoMigrate }}
+
+    integrations:
+      observatory_url: {{ .Values.config.integrations.observatoryUrl | quote }}
+      orchestrator_url: {{ .Values.config.integrations.orchestratorUrl | quote }}
+      sentinel_kafka_brokers:
+        {{- range .Values.config.integrations.sentinelKafkaBrokers }}
+        - {{ . | quote }}
+        {{- end }}
+      governance_url: {{ .Values.config.integrations.governanceUrl | quote }}
+      registry_url: {{ .Values.config.integrations.registryUrl | quote }}
+
+    strategies:
+      thresholds:
+        latency_p95_ms: {{ .Values.config.strategies.thresholds.latencyP95Ms }}
+        latency_increase_pct: {{ .Values.config.strategies.thresholds.latencyIncreasePct }}
+        error_rate_pct: {{ .Values.config.strategies.thresholds.errorRatePct }}
+        cost_per_request: {{ .Values.config.strategies.thresholds.costPerRequest }}
+        daily_budget: {{ .Values.config.strategies.thresholds.dailyBudget }}
+        quality_score_min: {{ .Values.config.strategies.thresholds.qualityScoreMin }}
+        quality_drop_pct: {{ .Values.config.strategies.thresholds.qualityDropPct }}
+        psi_threshold: {{ .Values.config.strategies.thresholds.psiThreshold }}
+        ks_test_p_value: {{ .Values.config.strategies.thresholds.ksTestPValue }}
+
+      ab_testing:
+        min_sample_size: {{ .Values.config.strategies.abTesting.minSampleSize }}
+        significance_level: {{ .Values.config.strategies.abTesting.significanceLevel }}
+        max_duration_seconds: {{ .Values.config.strategies.abTesting.maxDurationSeconds }}
+        allocation_strategy: {{ .Values.config.strategies.abTesting.allocationStrategy | quote }}
+
+      rl:
+        learning_rate: {{ .Values.config.strategies.rl.learningRate }}
+        exploration_rate: {{ .Values.config.strategies.rl.explorationRate }}
+        discount_factor: {{ .Values.config.strategies.rl.discountFactor }}
+        reward_weights:
+          quality: {{ .Values.config.strategies.rl.rewardWeights.quality }}
+          cost: {{ .Values.config.strategies.rl.rewardWeights.cost }}
+          latency: {{ .Values.config.strategies.rl.rewardWeights.latency }}
+          feedback: {{ .Values.config.strategies.rl.rewardWeights.feedback }}
+
+      cost_performance:
+        mode: {{ .Values.config.strategies.costPerformance.mode | quote }}
+
+    observability:
+      log_level: {{ .Values.config.observability.logLevel | quote }}
+      json_logging: {{ .Values.config.observability.jsonLogging }}
+      metrics_endpoint: {{ .Values.config.observability.metricsEndpoint | quote }}
+      traces_endpoint: {{ .Values.config.observability.tracesEndpoint | quote }}

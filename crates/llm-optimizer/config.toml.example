@@ -1,0 +1,70 @@
+# LLM Auto Optimizer Configuration
+# This is an example configuration file showing all available options
+
+[service]
+# Service metadata
+name = "llm-optimizer"
+version = "0.1.0"
+environment = "production"  # Options: development, staging, production
+host = "0.0.0.0"
+
+[collector]
+# Feedback collector configuration
+enabled = true
+kafka_brokers = ["localhost:9092"]
+kafka_topic = "llm-feedback"
+buffer_size = 10000
+batch_size = 100
+
+[processor]
+# Stream processor configuration
+enabled = true
+worker_threads = 4
+window_size_secs = 300  # 5 minutes
+
+[rest_api]
+# REST API configuration
+enabled = true
+port = 8080
+enable_tls = false
+timeout_secs = 30
+
+[grpc_api]
+# gRPC API configuration
+enabled = true
+port = 50051
+enable_tls = false
+
+[storage]
+# Storage backends configuration
+postgres_url = "postgres://localhost:5432/llm_optimizer"
+redis_url = "redis://localhost:6379"
+sled_path = "./data/sled"
+max_connections = 10
+
+[integrations]
+# External service integrations (all optional)
+
+# Slack webhook URL for notifications
+slack_webhook_url = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+
+# GitHub API token for issue tracking
+github_token = "ghp_your_github_token_here"
+
+# Jira integration
+[integrations.jira]
+base_url = "https://your-domain.atlassian.net"
+email = "your-email@example.com"
+api_token = "your_jira_api_token"
+
+# Anthropic Claude integration
+[integrations.anthropic]
+api_key = "sk-ant-your-api-key"
+base_url = "https://api.anthropic.com"  # Optional, defaults to official API
+
+[observability]
+# Logging and monitoring configuration
+log_level = "info"  # Options: trace, debug, info, warn, error
+json_logging = true  # Enable JSON logging for production
+otel_endpoint = "http://localhost:4317"  # OpenTelemetry collector endpoint
+metrics_port = 9090  # Prometheus metrics export port

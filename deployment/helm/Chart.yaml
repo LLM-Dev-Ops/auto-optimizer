@@ -1,0 +1,45 @@
+apiVersion: v2
+name: llm-optimizer
+description: A Helm chart for LLM Auto Optimizer - Intelligent LLM optimization with real-time feedback loops
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.24.0-0"
+
+keywords:
+  - llm
+  - optimizer
+  - ai
+  - machine-learning
+  - devops
+  - observability
+
+home: https://github.com/globalbusinessadvisors/llm-auto-optimizer
+sources:
+  - https://github.com/globalbusinessadvisors/llm-auto-optimizer
+
+maintainers:
+  - name: LLM DevOps Contributors
+    email: devops@llmdevops.dev
+    url: https://llmdevops.dev
+
+icon: https://llmdevops.dev/assets/logo.png
+
+dependencies:
+  - name: postgresql
+    version: "12.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+    tags:
+      - database
+
+  - name: redis
+    version: "17.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+    tags:
+      - cache
+
+annotations:
+  category: AI/ML
+  licenses: Apache-2.0

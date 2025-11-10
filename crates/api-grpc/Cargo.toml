@@ -1,0 +1,91 @@
+[package]
+name = "llm-optimizer-api-grpc"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Internal crates
+llm-optimizer-types = { workspace = true }
+llm-optimizer-config = { workspace = true }
+llm-optimizer-storage = { workspace = true }
+llm-optimizer-processor = { workspace = true }
+llm-optimizer-analyzer = { workspace = true }
+llm-optimizer-decision = { workspace = true }
+llm-optimizer-actuator = { workspace = true }
+
+# gRPC and Protocol Buffers
+tonic = { workspace = true }
+prost = { workspace = true }
+prost-types = "0.13"
+
+# Async runtime
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# TLS
+tokio-rustls = "0.26"
+rustls = "0.23"
+rustls-pemfile = "2.1"
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Observability
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+opentelemetry = { workspace = true }
+
+# Rate limiting
+governor = { workspace = true }
+dashmap = { workspace = true }
+
+# Authentication
+jsonwebtoken = "9.3"
+base64 = "0.22"
+
+# Tower middleware
+tower = { workspace = true }
+tower-http = { workspace = true }
+
+# Health checks
+tonic-health = "0.12"
+tonic-reflection = "0.12"
+
+# Metrics
+prometheus-client = { workspace = true }
+
+[build-dependencies]
+tonic-build = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+mockall = { workspace = true }
+wiremock = { workspace = true }
+criterion = { workspace = true }
+
+[[example]]
+name = "grpc_client"
+path = "examples/grpc_client.rs"
+
+[[example]]
+name = "streaming_demo"
+path = "examples/streaming_demo.rs"
+
+[features]
+default = ["tls"]
+tls = []
+mtls = ["tls"]

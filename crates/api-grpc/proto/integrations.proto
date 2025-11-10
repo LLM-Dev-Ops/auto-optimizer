@@ -1,0 +1,249 @@
+syntax = "proto3";
+
+package llm.optimizer.integrations;
+
+import "common.proto";
+import "google/protobuf/timestamp.proto";
+
+// Integration type
+enum IntegrationType {
+  INTEGRATION_TYPE_UNSPECIFIED = 0;
+  INTEGRATION_TYPE_OBSERVATORY = 1;
+  INTEGRATION_TYPE_ORCHESTRATOR = 2;
+  INTEGRATION_TYPE_SENTINEL = 3;
+  INTEGRATION_TYPE_GOVERNANCE = 4;
+  INTEGRATION_TYPE_REGISTRY = 5;
+  INTEGRATION_TYPE_CUSTOM = 6;
+}
+
+// Integration status
+enum IntegrationStatus {
+  INTEGRATION_STATUS_UNSPECIFIED = 0;
+  INTEGRATION_STATUS_ACTIVE = 1;
+  INTEGRATION_STATUS_INACTIVE = 2;
+  INTEGRATION_STATUS_ERROR = 3;
+  INTEGRATION_STATUS_CONNECTING = 4;
+}
+
+// Authentication type
+enum AuthenticationType {
+  AUTHENTICATION_TYPE_UNSPECIFIED = 0;
+  AUTHENTICATION_TYPE_NONE = 1;
+  AUTHENTICATION_TYPE_API_KEY = 2;
+  AUTHENTICATION_TYPE_OAUTH2 = 3;
+  AUTHENTICATION_TYPE_BASIC = 4;
+  AUTHENTICATION_TYPE_MTLS = 5;
+  AUTHENTICATION_TYPE_JWT = 6;
+}
+
+// Integration configuration
+message Integration {
+  string id = 1;
+  string name = 2;
+  IntegrationType type = 3;
+  string endpoint = 4;
+  IntegrationStatus status = 5;
+  AuthenticationType auth_type = 6;
+  map<string, string> credentials = 7;  // Encrypted/sensitive
+  map<string, string> settings = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  google.protobuf.Timestamp last_health_check = 11;
+  string health_status = 12;
+  map<string, string> metadata = 13;
+}
+
+// Create integration request
+message CreateIntegrationRequest {
+  string name = 1;
+  IntegrationType type = 2;
+  string endpoint = 3;
+  AuthenticationType auth_type = 4;
+  map<string, string> credentials = 5;
+  map<string, string> settings = 6;
+}
+
+// Create integration response
+message CreateIntegrationResponse {
+  Integration integration = 1;
+  common.ApiResponse status = 2;
+}
+
+// Get integration request
+message GetIntegrationRequest {
+  string integration_id = 1;
+}
+
+// Get integration response
+message GetIntegrationResponse {
+  Integration integration = 1;
+  common.ApiResponse status = 2;
+}
+
+// List integrations request
+message ListIntegrationsRequest {
+  repeated IntegrationType type_filter = 1;
+  repeated IntegrationStatus status_filter = 2;
+  common.PageRequest pagination = 3;
+}
+
+// List integrations response
+message ListIntegrationsResponse {
+  repeated Integration integrations = 1;
+  common.PageResponse pagination = 2;
+  common.ApiResponse status = 3;
+}
+
+// Update integration request
+message UpdateIntegrationRequest {
+  string integration_id = 1;
+  string name = 2;
+  string endpoint = 3;
+  AuthenticationType auth_type = 4;
+  map<string, string> credentials = 5;
+  map<string, string> settings = 6;
+}
+
+// Update integration response
+message UpdateIntegrationResponse {
+  Integration integration = 1;
+  common.ApiResponse status = 2;
+}
+
+// Delete integration request
+message DeleteIntegrationRequest {
+  string integration_id = 1;
+}
+
+// Delete integration response
+message DeleteIntegrationResponse {
+  common.ApiResponse status = 1;
+}
+
+// Test integration request
+message TestIntegrationRequest {
+  string integration_id = 1;
+}
+
+// Test result
+message TestResult {
+  bool success = 1;
+  double latency_ms = 2;
+  string message = 3;
+  map<string, string> details = 4;
+}
+
+// Test integration response
+message TestIntegrationResponse {
+  TestResult result = 1;
+  common.ApiResponse status = 2;
+}
+
+// Enable integration request
+message EnableIntegrationRequest {
+  string integration_id = 1;
+}
+
+// Enable integration response
+message EnableIntegrationResponse {
+  Integration integration = 1;
+  common.ApiResponse status = 2;
+}
+
+// Disable integration request
+message DisableIntegrationRequest {
+  string integration_id = 1;
+}
+
+// Disable integration response
+message DisableIntegrationResponse {
+  Integration integration = 1;
+  common.ApiResponse status = 2;
+}
+
+// Health check request
+message HealthCheckRequest {
+  string integration_id = 1;
+}
+
+// Health check response
+message HealthCheckResponse {
+  string status = 1;  // "healthy", "degraded", "unhealthy"
+  google.protobuf.Timestamp checked_at = 2;
+  map<string, string> details = 3;
+  common.ApiResponse api_status = 4;
+}
+
+// Integration event
+message IntegrationEvent {
+  string integration_id = 1;
+  string event_type = 2;  // "status_change", "health_check", "error", "data_received"
+  IntegrationStatus status = 3;
+  string message = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  map<string, string> metadata = 6;
+}
+
+// Subscribe to integration events request
+message SubscribeIntegrationEventsRequest {
+  repeated string integration_ids = 1;
+  repeated string event_types = 2;
+}
+
+// Integration metrics
+message IntegrationMetrics {
+  string integration_id = 1;
+  uint64 total_requests = 2;
+  uint64 successful_requests = 3;
+  uint64 failed_requests = 4;
+  double avg_latency_ms = 5;
+  double error_rate = 6;
+  google.protobuf.Timestamp period_start = 7;
+  google.protobuf.Timestamp period_end = 8;
+}
+
+// Get integration metrics request
+message GetIntegrationMetricsRequest {
+  string integration_id = 1;
+  common.TimeRange time_range = 2;
+}
+
+// Get integration metrics response
+message GetIntegrationMetricsResponse {
+  IntegrationMetrics metrics = 1;
+  common.ApiResponse status = 2;
+}
+
+// Sync data request
+message SyncDataRequest {
+  string integration_id = 1;
+  string data_type = 2;  // "metrics", "decisions", "configs"
+  common.TimeRange time_range = 3;
+}
+
+// Sync data response
+message SyncDataResponse {
+  int32 records_synced = 1;
+  google.protobuf.Timestamp sync_started = 2;
+  google.protobuf.Timestamp sync_completed = 3;
+  common.ApiResponse status = 4;
+}
+
+// Integration Service
+service IntegrationService {
+  // Unary RPCs - Standard operations
+  rpc CreateIntegration(CreateIntegrationRequest) returns (CreateIntegrationResponse);
+  rpc GetIntegration(GetIntegrationRequest) returns (GetIntegrationResponse);
+  rpc ListIntegrations(ListIntegrationsRequest) returns (ListIntegrationsResponse);
+  rpc UpdateIntegration(UpdateIntegrationRequest) returns (UpdateIntegrationResponse);
+  rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteIntegrationResponse);
+  rpc TestIntegration(TestIntegrationRequest) returns (TestIntegrationResponse);
+  rpc EnableIntegration(EnableIntegrationRequest) returns (EnableIntegrationResponse);
+  rpc DisableIntegration(DisableIntegrationRequest) returns (DisableIntegrationResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc GetIntegrationMetrics(GetIntegrationMetricsRequest) returns (GetIntegrationMetricsResponse);
+  rpc SyncData(SyncDataRequest) returns (SyncDataResponse);
+
+  // Server streaming - Real-time integration events
+  rpc SubscribeIntegrationEvents(SubscribeIntegrationEventsRequest) returns (stream IntegrationEvent);
+}

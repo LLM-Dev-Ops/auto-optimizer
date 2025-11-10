@@ -1,5 +1,5 @@
 [package]
-name = "cli"
+name = "llm-optimizer-cli"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -8,4 +8,63 @@ repository.workspace = true
 homepage.workspace = true
 rust-version.workspace = true
 
+[[bin]]
+name = "llm-optimizer"
+path = "src/main.rs"
+
 [dependencies]
+# Internal crates
+llm-optimizer-types = { workspace = true }
+llm-optimizer-config = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true, features = ["full"] }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# HTTP client
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+
+# gRPC client
+tonic = { workspace = true }
+prost = { workspace = true }
+
+# CLI framework
+clap = { workspace = true, features = ["derive", "env", "cargo", "color", "suggestions", "wrap_help"] }
+clap_complete = "4.5"
+
+# Terminal UI
+comfy-table = "7.1"
+indicatif = { version = "0.17", features = ["tokio"] }
+colored = "2.1"
+console = "0.15"
+dialoguer = { version = "0.11", features = ["fuzzy-select"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+toml = "0.8"
+csv = "1.3"
+
+# Configuration
+dirs = "5.0"
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+humantime = "2.1"
+
+# Observability
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+tempfile = { workspace = true }
+wiremock = { workspace = true }
+
+[features]
+default = []

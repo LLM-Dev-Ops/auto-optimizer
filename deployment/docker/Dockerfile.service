@@ -1,0 +1,101 @@
+# Multi-stage Dockerfile for LLM Auto Optimizer Service
+# Optimized for production with security best practices
+
+# ============================================================================
+# Stage 1: Builder - Compile Rust application
+# ============================================================================
+FROM rust:1.75-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    libpq-dev \
+    protobuf-compiler \
+    cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /build
+
+# Copy manifest files first for better layer caching
+COPY Cargo.toml Cargo.lock ./
+COPY crates/ ./crates/
+
+# Build the service (api-rest and api-grpc crates)
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/build/target \
+    cargo build --release \
+    -p llm-optimizer-api-rest \
+    -p llm-optimizer-api-grpc \
+    && cp target/release/llm-optimizer-service /tmp/llm-optimizer-service || \
+    (cargo build --release --workspace && \
+     find target/release -maxdepth 1 -type f -executable | head -1 | xargs -I {} cp {} /tmp/llm-optimizer-service)
+
+# ============================================================================
+# Stage 2: Runtime - Minimal production image
+# ============================================================================
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    libpq5 \
+    curl \
+    tini \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user for security
+RUN groupadd -r optimizer -g 1000 && \
+    useradd -r -g optimizer -u 1000 -m -s /sbin/nologin optimizer
+
+# Create necessary directories
+RUN mkdir -p /app /app/data /app/config /app/logs && \
+    chown -R optimizer:optimizer /app
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /tmp/llm-optimizer-service /app/llm-optimizer-service
+RUN chmod +x /app/llm-optimizer-service
+
+# Copy default configuration
+COPY config.example.yaml /app/config/config.yaml
+
+# Set proper permissions
+RUN chown -R optimizer:optimizer /app
+
+# Switch to non-root user
+USER optimizer
+
+# Expose ports
+# 8080: REST API
+# 50051: gRPC API
+# 9090: Metrics endpoint
+EXPOSE 8080 50051 9090
+
+# Add labels for metadata
+LABEL maintainer="LLM DevOps Contributors"
+LABEL version="0.1.0"
+LABEL description="LLM Auto Optimizer Service"
+LABEL org.opencontainers.image.source="https://github.com/globalbusinessadvisors/llm-auto-optimizer"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Environment variables
+ENV RUST_LOG=info \
+    RUST_BACKTRACE=1 \
+    CONFIG_PATH=/app/config/config.yaml
+
+# Volume mounts for data persistence
+VOLUME ["/app/data", "/app/logs"]
+
+# Use tini for proper signal handling
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+# Run the optimizer service
+CMD ["/app/llm-optimizer-service", "--config", "/app/config/config.yaml"]

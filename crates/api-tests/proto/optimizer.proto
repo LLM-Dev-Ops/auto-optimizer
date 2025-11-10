@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package optimizer;
+
+// Optimizer service for managing LLM optimization configurations
+service OptimizerService {
+  // Get health status
+  rpc GetHealth(HealthRequest) returns (HealthResponse);
+
+  // Get configuration
+  rpc GetConfig(GetConfigRequest) returns (ConfigResponse);
+
+  // Create configuration
+  rpc CreateConfig(CreateConfigRequest) returns (ConfigResponse);
+
+  // Update configuration
+  rpc UpdateConfig(UpdateConfigRequest) returns (ConfigResponse);
+
+  // Delete configuration
+  rpc DeleteConfig(DeleteConfigRequest) returns (DeleteConfigResponse);
+
+  // List configurations
+  rpc ListConfigs(ListConfigsRequest) returns (ListConfigsResponse);
+
+  // Server streaming: Subscribe to metrics
+  rpc SubscribeMetrics(MetricsRequest) returns (stream MetricEvent);
+
+  // Client streaming: Batch upload feedback
+  rpc UploadFeedback(stream FeedbackEvent) returns (UploadFeedbackResponse);
+
+  // Bidirectional streaming: Real-time optimization
+  rpc OptimizeRealtime(stream OptimizationRequest) returns (stream OptimizationResponse);
+}
+
+// Health check
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+  string version = 2;
+  int64 uptime_seconds = 3;
+}
+
+// Configuration messages
+message GetConfigRequest {
+  string id = 1;
+}
+
+message CreateConfigRequest {
+  string name = 1;
+  string model = 2;
+  double temperature = 3;
+  int32 max_tokens = 4;
+  map<string, string> metadata = 5;
+}
+
+message UpdateConfigRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string model = 3;
+  optional double temperature = 4;
+  optional int32 max_tokens = 5;
+}
+
+message DeleteConfigRequest {
+  string id = 1;
+}
+
+message DeleteConfigResponse {
+  bool success = 1;
+}
+
+message ConfigResponse {
+  string id = 1;
+  string name = 2;
+  string model = 3;
+  double temperature = 4;
+  int32 max_tokens = 5;
+  int64 created_at = 6;
+  int64 updated_at = 7;
+  map<string, string> metadata = 8;
+}
+
+message ListConfigsRequest {
+  int32 page = 1;
+  int32 per_page = 2;
+  optional string filter = 3;
+}
+
+message ListConfigsResponse {
+  repeated ConfigResponse configs = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 total_pages = 4;
+}
+
+// Streaming messages
+message MetricsRequest {
+  repeated string metric_names = 1;
+  int32 interval_seconds = 2;
+}
+
+message MetricEvent {
+  string name = 1;
+  double value = 2;
+  int64 timestamp = 3;
+  map<string, string> labels = 4;
+}
+
+message FeedbackEvent {
+  string request_id = 1;
+  double latency_ms = 2;
+  double cost = 3;
+  double quality_score = 4;
+  int64 timestamp = 5;
+}
+
+message UploadFeedbackResponse {
+  int32 events_received = 1;
+  int32 events_processed = 2;
+}
+
+message OptimizationRequest {
+  string config_id = 1;
+  string prompt = 2;
+  map<string, string> context = 3;
+}
+
+message OptimizationResponse {
+  string config_id = 1;
+  string optimized_prompt = 2;
+  string recommended_model = 3;
+  double estimated_cost = 4;
+  double estimated_latency = 5;
+}
+
+// Error details
+message ErrorDetail {
+  string code = 1;
+  string message = 2;
+  map<string, string> details = 3;
+}

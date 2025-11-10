@@ -1,0 +1,71 @@
+---
+# Persistent Volume Claim for application data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: llm-optimizer-data
+  namespace: llm-optimizer
+  labels:
+    app.kubernetes.io/name: llm-optimizer
+    app.kubernetes.io/component: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard  # Change based on your cluster
+
+---
+# Persistent Volume Claim for logs
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: llm-optimizer-logs
+  namespace: llm-optimizer
+  labels:
+    app.kubernetes.io/name: llm-optimizer
+    app.kubernetes.io/component: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+# Persistent Volume Claim for PostgreSQL
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: llm-optimizer
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: standard
+
+---
+# Persistent Volume Claim for Redis
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  namespace: llm-optimizer
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard

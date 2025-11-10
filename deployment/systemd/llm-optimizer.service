@@ -1,0 +1,71 @@
+[Unit]
+Description=LLM Auto Optimizer Service
+Documentation=https://github.com/globalbusinessadvisors/llm-auto-optimizer
+After=network-online.target postgresql.service redis.service
+Wants=network-online.target
+Requires=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=llm-optimizer
+Group=llm-optimizer
+WorkingDirectory=/opt/llm-optimizer
+
+# Environment configuration
+EnvironmentFile=-/etc/llm-optimizer/llm-optimizer.env
+Environment="RUST_LOG=info"
+Environment="RUST_BACKTRACE=0"
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/llm-optimizer/data /var/log/llm-optimizer
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+CPUQuota=400%
+CPUAccounting=true
+MemoryLimit=4G
+MemoryAccounting=true
+TasksMax=4096
+
+# Start the service
+ExecStart=/opt/llm-optimizer/bin/llm-optimizer-service --config /etc/llm-optimizer/config.yaml
+
+# Restart configuration
+Restart=on-failure
+RestartSec=5s
+StartLimitInterval=60s
+StartLimitBurst=3
+
+# Signal handling for graceful shutdown
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+SendSIGKILL=yes
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=llm-optimizer
+
+# Watchdog
+WatchdogSec=60s
+
+[Install]
+WantedBy=multi-user.target

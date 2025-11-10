@@ -11,7 +11,11 @@ members = [
     "crates/integrations",
     "crates/config",
     "crates/api",
+    "crates/api-rest",
+    "crates/api-grpc",
+    "crates/api-tests",
     "crates/cli",
+    "crates/llm-optimizer",
 ]
 
 [workspace.package]
@@ -35,6 +39,8 @@ llm-optimizer-storage = { path = "crates/storage" }
 llm-optimizer-integrations = { path = "crates/integrations" }
 llm-optimizer-config = { path = "crates/config" }
 llm-optimizer-api = { path = "crates/api" }
+llm-optimizer-api-rest = { path = "crates/api-rest" }
+llm-optimizer-api-grpc = { path = "crates/api-grpc" }
 
 # Async Runtime
 tokio = { version = "1.40", features = ["full"] }

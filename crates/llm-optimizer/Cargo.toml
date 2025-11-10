@@ -1,0 +1,82 @@
+[package]
+name = "llm-optimizer"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "Production-ready main service binary for LLM Auto Optimizer"
+
+[[bin]]
+name = "llm-optimizer"
+path = "src/main.rs"
+
+[lib]
+name = "llm_optimizer"
+path = "src/lib.rs"
+
+[dependencies]
+# Internal crates
+llm-optimizer-types = { workspace = true }
+llm-optimizer-collector = { workspace = true }
+llm-optimizer-processor = { workspace = true }
+llm-optimizer-storage = { workspace = true }
+llm-optimizer-integrations = { workspace = true, features = ["jira", "anthropic"] }
+llm-optimizer-config = { workspace = true }
+llm-optimizer-api-rest = { workspace = true }
+# Note: api-grpc not yet in workspace dependencies
+llm-optimizer-api-grpc = { path = "../api-grpc" }
+
+# Async Runtime
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# HTTP & gRPC
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tonic = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+
+# Database
+sqlx = { workspace = true }
+redis = { workspace = true }
+sled = { workspace = true }
+
+# Observability
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+prometheus-client = { workspace = true }
+
+# Configuration
+figment = { workspace = true }
+notify = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+dashmap = { workspace = true }
+
+# CLI
+clap = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+mockall = { workspace = true }
+
+[features]
+default = []
+full = []

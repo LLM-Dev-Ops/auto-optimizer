@@ -1,0 +1,87 @@
+[package]
+name = "llm-optimizer-api-rest"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Internal crates
+llm-optimizer-types = { path = "../types" }
+llm-optimizer-config = { path = "../config" }
+llm-optimizer-storage = { path = "../storage" }
+llm-optimizer-integrations = { path = "../integrations" }
+llm-optimizer-processor = { path = "../processor" }
+llm-optimizer-analyzer = { path = "../analyzer" }
+llm-optimizer-decision = { path = "../decision" }
+llm-optimizer-actuator = { path = "../actuator" }
+
+# Async runtime
+tokio.workspace = true
+async-trait.workspace = true
+futures.workspace = true
+
+# HTTP server framework
+axum = { workspace = true, features = ["macros", "multipart", "ws"] }
+tower.workspace = true
+tower-http = { workspace = true, features = ["trace", "cors", "compression-gzip", "compression-br", "request-id", "timeout", "add-extension"] }
+hyper = { version = "1.4", features = ["full"] }
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+rmp-serde.workspace = true  # MessagePack support
+
+# Validation
+validator = { version = "0.18", features = ["derive"] }
+
+# Authentication & Authorization
+jsonwebtoken = "9.3"
+bcrypt = "0.15"
+argon2 = "0.5"
+
+# Rate limiting
+governor.workspace = true
+tower-governor = "0.4"
+
+# OpenAPI
+utoipa = { version = "4.2", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "7.1", features = ["axum"] }
+utoipa-rapidoc = { version = "4.0", features = ["axum"] }
+utoipa-redoc = { version = "4.0", features = ["axum"] }
+
+# Observability
+tracing.workspace = true
+tracing-subscriber.workspace = true
+prometheus-client.workspace = true
+
+# Utilities
+uuid.workspace = true
+chrono.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+bytes = "1.7"
+http = "1.1"
+http-body-util = "0.1"
+mime = "0.3"
+
+# Security
+sha2.workspace = true
+base64 = "0.22"
+
+# Environment variables
+dotenvy = "0.15"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+tower = { workspace = true, features = ["util"] }
+wiremock.workspace = true
+mockall.workspace = true
+tempfile.workspace = true
+axum-test = "15.3"
+
+[features]
+default = []
