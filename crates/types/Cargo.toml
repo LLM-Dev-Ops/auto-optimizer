@@ -5,6 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Core types and data structures for LLM Auto Optimizer"
 
 [dependencies]
 serde = { workspace = true }

@@ -5,6 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Intelligent decision-making engine"
 
 [dependencies]
 llm-optimizer-types = { workspace = true }

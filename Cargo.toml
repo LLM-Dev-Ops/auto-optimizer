@@ -21,11 +21,15 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-authors = ["LLM DevOps Contributors"]
+authors = ["LLM Auto Optimizer Contributors <noreply@llmdevops.dev>"]
 license = "Apache-2.0"
-repository = "https://github.com/llm-devops/llm-auto-optimizer"
-homepage = "https://llmdevops.dev"
+repository = "https://github.com/globalbusinessadvisors/llm-auto-optimizer"
+homepage = "https://github.com/globalbusinessadvisors/llm-auto-optimizer"
+documentation = "https://docs.rs/llm-optimizer"
 rust-version = "1.75"
+keywords = ["llm", "optimization", "ai", "devops", "monitoring"]
+categories = ["development-tools", "web-programming", "asynchronous"]
+readme = "README.md"
 
 [workspace.dependencies]
 # Internal crates

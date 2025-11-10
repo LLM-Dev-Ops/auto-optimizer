@@ -1,9 +1,22 @@
 {
   "name": "@llm-auto-optimizer/github-integration",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Enterprise-grade GitHub API integration with OAuth, rate limiting, and webhooks",
   "main": "index.ts",
   "types": "index.ts",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/globalbusinessadvisors/llm-auto-optimizer.git",
+    "directory": "src/integrations/github"
+  },
+  "bugs": {
+    "url": "https://github.com/globalbusinessadvisors/llm-auto-optimizer/issues"
+  },
+  "homepage": "https://github.com/globalbusinessadvisors/llm-auto-optimizer/tree/main/src/integrations/github#readme",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",

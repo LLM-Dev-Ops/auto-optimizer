@@ -1,9 +1,21 @@
 {
-  "name": "llm-auto-optimizer",
+  "name": "@llm-auto-optimizer/core",
   "version": "0.1.0",
   "description": "Intelligent LLM model optimization system with webhook notifications",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/globalbusinessadvisors/llm-auto-optimizer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/globalbusinessadvisors/llm-auto-optimizer/issues"
+  },
+  "homepage": "https://github.com/globalbusinessadvisors/llm-auto-optimizer#readme",
   "scripts": {
     "build": "tsc",
     "test": "jest",
