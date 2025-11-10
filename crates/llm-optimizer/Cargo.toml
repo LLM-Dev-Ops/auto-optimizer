@@ -27,7 +27,7 @@ llm-optimizer-integrations = { workspace = true, features = ["jira", "anthropic"
 llm-optimizer-config = { workspace = true }
 llm-optimizer-api-rest = { workspace = true }
 # Note: api-grpc not yet in workspace dependencies
-llm-optimizer-api-grpc = { path = "../api-grpc" }
+llm-optimizer-api-grpc = { version = "0.1.0", path = "../api-grpc" }
 
 # Async Runtime
 tokio = { workspace = true }

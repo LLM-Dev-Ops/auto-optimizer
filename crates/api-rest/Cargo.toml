@@ -11,14 +11,14 @@ description = "Production-ready REST API with OpenAPI documentation"
 
 [dependencies]
 # Internal crates
-llm-optimizer-types = { path = "../types" }
-llm-optimizer-config = { path = "../config" }
-llm-optimizer-storage = { path = "../storage" }
-llm-optimizer-integrations = { path = "../integrations" }
-llm-optimizer-processor = { path = "../processor" }
-llm-optimizer-analyzer = { path = "../analyzer" }
-llm-optimizer-decision = { path = "../decision" }
-llm-optimizer-actuator = { path = "../actuator" }
+llm-optimizer-types = { version = "0.1.0", path = "../types" }
+llm-optimizer-config = { version = "0.1.0", path = "../config" }
+llm-optimizer-storage = { version = "0.1.0", path = "../storage" }
+llm-optimizer-integrations = { version = "0.1.0", path = "../integrations" }
+llm-optimizer-processor = { version = "0.1.0", path = "../processor" }
+llm-optimizer-analyzer = { version = "0.1.0", path = "../analyzer" }
+llm-optimizer-decision = { version = "0.1.0", path = "../decision" }
+llm-optimizer-actuator = { version = "0.1.0", path = "../actuator" }
 
 # Async runtime
 tokio.workspace = true
