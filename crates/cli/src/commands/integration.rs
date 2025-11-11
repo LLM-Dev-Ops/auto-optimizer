@@ -1,6 +1,6 @@
 //! Integration management commands
 
-use crate::{client::{AddIntegrationRequest, ApiClient}, output::OutputWriter, CliResult};
+use crate::{client::{AddIntegrationRequest, ApiClient}, output::OutputWriter, Formatter, CliResult};
 use clap::Subcommand;
 use colored::Colorize;
 use dialoguer::Confirm;
@@ -46,7 +46,7 @@ impl IntegrationCommand {
     pub async fn execute(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
     ) -> CliResult<()> {
         match self {
             IntegrationCommand::Add {
@@ -63,7 +63,7 @@ impl IntegrationCommand {
     async fn add(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         integration_type: &str,
         name: &str,
         config: &str,
@@ -88,7 +88,7 @@ impl IntegrationCommand {
         Ok(())
     }
 
-    async fn list(&self, client: &dyn ApiClient, formatter: &dyn OutputWriter) -> CliResult<()> {
+    async fn list(&self, client: &dyn ApiClient, formatter: &Formatter) -> CliResult<()> {
         let integrations = client.list_integrations().await?;
 
         if integrations.is_empty() {
@@ -107,7 +107,7 @@ impl IntegrationCommand {
     async fn test(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         id: &str,
     ) -> CliResult<()> {
         println!("{}", "Testing integration...".cyan());

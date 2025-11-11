@@ -15,8 +15,8 @@ const PLATFORMS = [
 const VERSION = '0.1.1';
 
 function createPlatformPackage(platform) {
-  const packageName = `@llm-dev-ops/cli-${platform.platform}-${platform.arch}`;
-  const packageDir = path.join(__dirname, 'packages', `cli-${platform.platform}-${platform.arch}`);
+  const packageName = `@llm-dev-ops/llm-auto-optimizer-cli-${platform.platform}-${platform.arch}`;
+  const packageDir = path.join(__dirname, 'packages', `llm-auto-optimizer-cli-${platform.platform}-${platform.arch}`);
 
   // Create package directory
   if (!fs.existsSync(packageDir)) {

@@ -1,5 +1,5 @@
 {
-  "name": "@llm-dev-ops/optimizer",
+  "name": "@llm-dev-ops/llm-auto-optimizer",
   "version": "0.1.1",
   "description": "LLM Auto Optimizer - Intelligent cost optimization for LLM applications",
   "keywords": [
@@ -38,10 +38,10 @@
     "node": ">=14.0.0"
   },
   "optionalDependencies": {
-    "@llm-dev-ops/cli-darwin-x64": "0.1.1",
-    "@llm-dev-ops/cli-darwin-arm64": "0.1.1",
-    "@llm-dev-ops/cli-linux-x64": "0.1.1",
-    "@llm-dev-ops/cli-linux-arm64": "0.1.1",
-    "@llm-dev-ops/cli-win32-x64": "0.1.1"
+    "@llm-dev-ops/llm-auto-optimizer-cli-darwin-x64": "0.1.1",
+    "@llm-dev-ops/llm-auto-optimizer-cli-darwin-arm64": "0.1.1",
+    "@llm-dev-ops/llm-auto-optimizer-cli-linux-x64": "0.1.1",
+    "@llm-dev-ops/llm-auto-optimizer-cli-linux-arm64": "0.1.1",
+    "@llm-dev-ops/llm-auto-optimizer-cli-win32-x64": "0.1.1"
   }
 }

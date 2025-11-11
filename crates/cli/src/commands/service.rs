@@ -1,6 +1,6 @@
 //! Service management commands
 
-use crate::{client::ApiClient, output::OutputWriter, CliResult};
+use crate::{client::ApiClient, output::OutputWriter, Formatter, CliResult};
 use clap::Subcommand;
 use colored::Colorize;
 
@@ -35,7 +35,7 @@ impl ServiceCommand {
     pub async fn execute(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
     ) -> CliResult<()> {
         match self {
             ServiceCommand::Start => self.start(client).await,
@@ -91,7 +91,7 @@ impl ServiceCommand {
     async fn status(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
     ) -> CliResult<()> {
         let status = client.get_service_status().await?;
 

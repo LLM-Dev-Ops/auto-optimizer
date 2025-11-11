@@ -1,13 +1,13 @@
 //! Interactive mode for CLI
 
-use crate::{client::ApiClient, output::OutputWriter, CliResult};
+use crate::{client::ApiClient, Formatter, CliResult};
 use colored::Colorize;
 use dialoguer::{theme::ColorfulTheme, Select};
 
 /// Interactive mode main menu
 pub async fn run_interactive_mode(
     client: &dyn ApiClient,
-    formatter: &dyn OutputWriter,
+    formatter: &Formatter,
 ) -> CliResult<()> {
     loop {
         println!("\n{}", "=== LLM Auto Optimizer ===".cyan().bold());
@@ -49,7 +49,7 @@ pub async fn run_interactive_mode(
 
 async fn create_optimization_interactive(
     client: &dyn ApiClient,
-    formatter: &dyn OutputWriter,
+    formatter: &Formatter,
 ) -> CliResult<()> {
     use crate::commands::optimize::OptimizeCommand;
 
@@ -67,7 +67,7 @@ async fn create_optimization_interactive(
 
 async fn list_optimizations_interactive(
     client: &dyn ApiClient,
-    formatter: &dyn OutputWriter,
+    formatter: &Formatter,
 ) -> CliResult<()> {
     use crate::commands::optimize::OptimizeCommand;
 
@@ -86,7 +86,7 @@ async fn list_optimizations_interactive(
 
 async fn view_metrics_interactive(
     client: &dyn ApiClient,
-    formatter: &dyn OutputWriter,
+    formatter: &Formatter,
 ) -> CliResult<()> {
     println!("\n{}", "View Metrics".cyan().bold());
 
@@ -133,7 +133,7 @@ async fn view_metrics_interactive(
 
 async fn manage_integrations_interactive(
     client: &dyn ApiClient,
-    formatter: &dyn OutputWriter,
+    formatter: &Formatter,
 ) -> CliResult<()> {
     use crate::commands::integration::IntegrationCommand;
 
@@ -145,7 +145,7 @@ async fn manage_integrations_interactive(
 
 async fn configuration_interactive(
     client: &dyn ApiClient,
-    formatter: &dyn OutputWriter,
+    formatter: &Formatter,
 ) -> CliResult<()> {
     use crate::commands::config::ConfigCommand;
 
@@ -157,7 +157,7 @@ async fn configuration_interactive(
 
 async fn system_status_interactive(
     client: &dyn ApiClient,
-    formatter: &dyn OutputWriter,
+    formatter: &Formatter,
 ) -> CliResult<()> {
     use crate::commands::admin::AdminCommand;
 

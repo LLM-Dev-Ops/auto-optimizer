@@ -1,6 +1,6 @@
 //! Admin operation commands
 
-use crate::{client::ApiClient, output::OutputWriter, CliResult};
+use crate::{client::ApiClient, output::OutputWriter, Formatter, CliResult};
 use clap::Subcommand;
 use colored::Colorize;
 use dialoguer::Confirm;
@@ -29,7 +29,7 @@ impl AdminCommand {
     pub async fn execute(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
     ) -> CliResult<()> {
         match self {
             AdminCommand::Stats => self.stats(client, formatter).await,
@@ -39,7 +39,7 @@ impl AdminCommand {
         }
     }
 
-    async fn stats(&self, client: &dyn ApiClient, formatter: &dyn OutputWriter) -> CliResult<()> {
+    async fn stats(&self, client: &dyn ApiClient, formatter: &Formatter) -> CliResult<()> {
         let stats = client.get_stats().await?;
 
         let output = formatter.write(&stats)?;
@@ -60,7 +60,7 @@ impl AdminCommand {
     async fn cache_flush(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         yes: bool,
     ) -> CliResult<()> {
         if !yes {
@@ -88,7 +88,7 @@ impl AdminCommand {
         Ok(())
     }
 
-    async fn health(&self, client: &dyn ApiClient, formatter: &dyn OutputWriter) -> CliResult<()> {
+    async fn health(&self, client: &dyn ApiClient, formatter: &Formatter) -> CliResult<()> {
         let health = client.get_detailed_health().await?;
 
         let output = formatter.write(&health)?;
@@ -117,7 +117,7 @@ impl AdminCommand {
     async fn version(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
     ) -> CliResult<()> {
         let version = client.get_version().await?;
 

@@ -57,13 +57,32 @@ pub trait OutputWriter {
     fn write<T: Serialize>(&self, data: &T) -> CliResult<String>;
 }
 
+/// Formatter enum that holds all formatter types
+pub enum Formatter {
+    Table(TableFormatter),
+    Json(JsonFormatter),
+    Yaml(YamlFormatter),
+    Csv(CsvFormatter),
+}
+
+impl OutputWriter for Formatter {
+    fn write<T: Serialize>(&self, data: &T) -> CliResult<String> {
+        match self {
+            Formatter::Table(f) => f.write(data),
+            Formatter::Json(f) => f.write(data),
+            Formatter::Yaml(f) => f.write(data),
+            Formatter::Csv(f) => f.write(data),
+        }
+    }
+}
+
 /// Get formatter for the specified format
-pub fn get_formatter(format: OutputFormat) -> Box<dyn OutputWriter> {
+pub fn get_formatter(format: OutputFormat) -> Formatter {
     match format {
-        OutputFormat::Table => Box::new(TableFormatter),
-        OutputFormat::Json => Box::new(JsonFormatter),
-        OutputFormat::Yaml => Box::new(YamlFormatter),
-        OutputFormat::Csv => Box::new(CsvFormatter),
+        OutputFormat::Table => Formatter::Table(TableFormatter),
+        OutputFormat::Json => Formatter::Json(JsonFormatter),
+        OutputFormat::Yaml => Formatter::Yaml(YamlFormatter),
+        OutputFormat::Csv => Formatter::Csv(CsvFormatter),
     }
 }
 

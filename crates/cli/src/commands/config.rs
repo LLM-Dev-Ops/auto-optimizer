@@ -1,6 +1,6 @@
 //! Configuration management commands
 
-use crate::{client::ApiClient, output::OutputWriter, CliResult};
+use crate::{client::ApiClient, output::OutputWriter, Formatter, CliResult};
 use clap::Subcommand;
 use colored::Colorize;
 use std::path::PathBuf;
@@ -46,7 +46,7 @@ impl ConfigCommand {
     pub async fn execute(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
     ) -> CliResult<()> {
         match self {
             ConfigCommand::Get { key } => self.get(client, formatter, key).await,
@@ -61,7 +61,7 @@ impl ConfigCommand {
     async fn get(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         key: &str,
     ) -> CliResult<()> {
         let config = client.get_config(key).await?;
@@ -73,7 +73,7 @@ impl ConfigCommand {
     async fn set(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         key: &str,
         value: &str,
     ) -> CliResult<()> {
@@ -87,7 +87,7 @@ impl ConfigCommand {
         Ok(())
     }
 
-    async fn list(&self, client: &dyn ApiClient, formatter: &dyn OutputWriter) -> CliResult<()> {
+    async fn list(&self, client: &dyn ApiClient, formatter: &Formatter) -> CliResult<()> {
         let configs = client.list_configs().await?;
 
         if configs.is_empty() {

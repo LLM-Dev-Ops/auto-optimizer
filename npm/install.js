@@ -4,11 +4,11 @@ const { existsSync } = require('fs');
 const { join } = require('path');
 
 const PLATFORMS = {
-  'darwin-x64': '@llm-dev-ops/cli-darwin-x64',
-  'darwin-arm64': '@llm-dev-ops/cli-darwin-arm64',
-  'linux-x64': '@llm-dev-ops/cli-linux-x64',
-  'linux-arm64': '@llm-dev-ops/cli-linux-arm64',
-  'win32-x64': '@llm-dev-ops/cli-win32-x64',
+  'darwin-x64': '@llm-dev-ops/llm-auto-optimizer-cli-darwin-x64',
+  'darwin-arm64': '@llm-dev-ops/llm-auto-optimizer-cli-darwin-arm64',
+  'linux-x64': '@llm-dev-ops/llm-auto-optimizer-cli-linux-x64',
+  'linux-arm64': '@llm-dev-ops/llm-auto-optimizer-cli-linux-arm64',
+  'win32-x64': '@llm-dev-ops/llm-auto-optimizer-cli-win32-x64',
 };
 
 function getPlatform() {

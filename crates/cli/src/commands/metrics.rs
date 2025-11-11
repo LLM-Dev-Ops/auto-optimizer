@@ -3,6 +3,7 @@
 use crate::{
     client::{ApiClient, CostQuery, ExportMetricsQuery, MetricsQuery, PerformanceQuery, QualityQuery},
     output::OutputWriter,
+    Formatter,
     CliResult,
 };
 use clap::Subcommand;
@@ -99,7 +100,7 @@ impl MetricsCommand {
     pub async fn execute(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
     ) -> CliResult<()> {
         match self {
             MetricsCommand::Query {
@@ -129,7 +130,7 @@ impl MetricsCommand {
     async fn query(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         metrics: &[String],
         from: &Option<String>,
         to: &Option<String>,
@@ -153,7 +154,7 @@ impl MetricsCommand {
     async fn performance(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         service: &Option<String>,
         from: &Option<String>,
         to: &Option<String>,
@@ -183,7 +184,7 @@ impl MetricsCommand {
     async fn cost(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         service: &Option<String>,
         from: &Option<String>,
         to: &Option<String>,
@@ -217,7 +218,7 @@ impl MetricsCommand {
     async fn quality(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         service: &Option<String>,
         from: &Option<String>,
         to: &Option<String>,

@@ -8,7 +8,7 @@ pub mod interactive;
 pub mod output;
 
 pub use client::{ApiClient, ClientConfig};
-pub use output::{OutputFormat, OutputWriter};
+pub use output::{Formatter, OutputFormat, OutputWriter};
 
 use thiserror::Error;
 
@@ -60,6 +60,18 @@ impl From<serde_yaml::Error> for CliError {
 
 impl From<csv::Error> for CliError {
     fn from(err: csv::Error) -> Self {
+        CliError::Serialization(err.to_string())
+    }
+}
+
+impl<W> From<csv::IntoInnerError<W>> for CliError {
+    fn from(err: csv::IntoInnerError<W>) -> Self {
+        CliError::Serialization(err.to_string())
+    }
+}
+
+impl From<std::string::FromUtf8Error> for CliError {
+    fn from(err: std::string::FromUtf8Error) -> Self {
         CliError::Serialization(err.to_string())
     }
 }

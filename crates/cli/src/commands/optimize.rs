@@ -6,6 +6,7 @@ use crate::{
         ListOptimizationsQuery, RollbackOptimizationRequest,
     },
     output::OutputWriter,
+    Formatter,
     CliResult,
 };
 use clap::Subcommand;
@@ -112,7 +113,7 @@ impl OptimizeCommand {
     pub async fn execute(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
     ) -> CliResult<()> {
         match self {
             OptimizeCommand::Create {
@@ -154,7 +155,7 @@ impl OptimizeCommand {
     async fn create(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         services: &[String],
         strategy: &str,
         dry_run: bool,
@@ -251,7 +252,7 @@ impl OptimizeCommand {
     async fn list(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         status: &Option<String>,
         strategy: &Option<String>,
         service: &Option<String>,
@@ -288,7 +289,7 @@ impl OptimizeCommand {
     async fn get(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         id: &str,
     ) -> CliResult<()> {
         let optimization = client.get_optimization(id).await?;
@@ -302,7 +303,7 @@ impl OptimizeCommand {
     async fn deploy(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         id: &str,
         gradual: bool,
         percentage: f64,
@@ -355,7 +356,7 @@ impl OptimizeCommand {
     async fn rollback(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         id: &str,
         reason: &Option<String>,
         yes: bool,
@@ -410,7 +411,7 @@ impl OptimizeCommand {
     async fn cancel(
         &self,
         client: &dyn ApiClient,
-        formatter: &dyn OutputWriter,
+        formatter: &Formatter,
         id: &str,
         yes: bool,
     ) -> CliResult<()> {

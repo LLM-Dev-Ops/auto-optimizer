@@ -2,7 +2,7 @@
 //!
 //! Production-grade command-line interface for managing LLM Auto Optimizer.
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 use colored::Colorize;
 use llm_optimizer_cli::{
     client::{ClientConfig, RestClient},
@@ -237,7 +237,7 @@ async fn run() -> CliResult<()> {
 
     // Handle interactive mode
     if let Some(Commands::Interactive) = &cli.command {
-        return interactive::run_interactive_mode(&client, formatter.as_ref()).await;
+        return interactive::run_interactive_mode(&client, &formatter).await;
     }
 
     // If no command provided, show help
@@ -251,22 +251,22 @@ async fn run() -> CliResult<()> {
     // Execute command
     match command {
         Commands::Service { command } => {
-            command.execute(&client, formatter.as_ref()).await?;
+            command.execute(&client, &formatter).await?;
         }
         Commands::Optimize { command } => {
-            command.execute(&client, formatter.as_ref()).await?;
+            command.execute(&client, &formatter).await?;
         }
         Commands::Config { command } => {
-            command.execute(&client, formatter.as_ref()).await?;
+            command.execute(&client, &formatter).await?;
         }
         Commands::Metrics { command } => {
-            command.execute(&client, formatter.as_ref()).await?;
+            command.execute(&client, &formatter).await?;
         }
         Commands::Integration { command } => {
-            command.execute(&client, formatter.as_ref()).await?;
+            command.execute(&client, &formatter).await?;
         }
         Commands::Admin { command } => {
-            command.execute(&client, formatter.as_ref()).await?;
+            command.execute(&client, &formatter).await?;
         }
         Commands::Init { .. } | Commands::Completions { .. } | Commands::Doctor | Commands::Interactive => {
             // Already handled above
@@ -284,7 +284,7 @@ fn load_config(cli: &Cli) -> CliResult<CliConfig> {
     } else if let Some(default_config) = CliConfig::default_config_file() {
         // Try to load from default location
         if default_config.exists() {
-            CliConfig::from_file(&default_config).unwrap_or_default()
+            Ok(CliConfig::from_file(&default_config).unwrap_or_default())
         } else {
             Ok(CliConfig::default())
         }
