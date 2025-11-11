@@ -1,5 +1,5 @@
 [package]
-name = "api-tests"
+name = "llm-optimizer-api-tests"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -83,5 +83,5 @@ name = "streaming_bench"
 harness = false
 
 [lib]
-name = "api_tests"
+name = "llm_optimizer_api_tests"
 path = "src/lib.rs"
