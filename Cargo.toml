@@ -35,6 +35,14 @@ readme = "README.md"
 [workspace.dependencies]
 # Internal crates
 llm-optimizer-types = { version = "0.1.0", path = "crates/types" }
+
+# LLM-Dev-Ops upstream dependencies (Phase 2B compile-time)
+llm-cost-ops = "0.1"
+llm-latency-lens = "0.1"
+sentinel = "0.1"
+llm-shield-core = "0.2"
+llm-observatory-core = "0.1"
+llm-config-manager = "0.1"
 llm-optimizer-collector = { version = "0.1.0", path = "crates/collector" }
 llm-optimizer-processor = { version = "0.1.0", path = "crates/processor" }
 llm-optimizer-analyzer = { version = "0.1.0", path = "crates/analyzer" }
