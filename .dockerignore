@@ -1,12 +1,11 @@
-# Ignore build artifacts
-target/
-**/target/
-*.o
-*.so
-*.dylib
-*.a
+# Dependencies
+node_modules/
 
-# Ignore development files
+# Build output
+dist/
+target/
+
+# Dev / IDE
 .git/
 .github/
 .vscode/
@@ -15,68 +14,53 @@ target/
 *.swo
 *~
 
-# Ignore test files
+# Tests
 tests/
-**/tests/
-test_data/
-*.test
+**/*.test.ts
+**/*.spec.ts
 
-# Ignore documentation
+# Documentation
 docs/
 *.md
-!README.md
 
-# Ignore deployment files
-deployment/
-docker-compose*.yml
+# Docker / deployment meta
 Dockerfile*
+docker-compose*.yml
 .dockerignore
+deployment/
+cloudbuild.yaml
 
-# Ignore environment files
+# Environment / secrets
 .env
 .env.*
 *.env
 
-# Ignore logs and data
+# Logs / data
 logs/
 *.log
 data/
 *.db
 *.sqlite
 
-# Ignore CI/CD
-.github/
-.gitlab-ci.yml
-.travis.yml
-
-# Ignore IDE and editor files
-.vscode/
-.idea/
-*.iml
-.project
-.classpath
-.settings/
-
-# Ignore OS files
+# OS files
 .DS_Store
 Thumbs.db
 
-# Ignore dependency directories
-node_modules/
-bower_components/
+# Rust artifacts (not used in this build)
+crates/
+Cargo.toml
+Cargo.lock
 
-# Ignore backup files
-*.bak
-*.backup
-*.old
-
-# Ignore monitoring configs (copied separately if needed)
+# Monitoring
 monitoring/
 prometheus.yml
 grafana/
 
-# Keep only necessary files for build
-!Cargo.toml
-!Cargo.lock
-!crates/
-!config.example.yaml
+# Misc
+*.bak
+*.backup
+*.old
+benchmarks/
+examples/
+plans/
+scripts/

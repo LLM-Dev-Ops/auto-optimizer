@@ -28,7 +28,8 @@
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "@slack/bolt": "^3.17.1",

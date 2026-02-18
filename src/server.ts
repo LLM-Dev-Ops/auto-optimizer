@@ -165,7 +165,8 @@ async function handleHealth(res: ServerResponse): Promise<void> {
 
   const status = ruvectorStatus === 'healthy' ? 'healthy' : 'degraded';
 
-  sendJson(res, status === 'healthy' ? 200 : 503, {
+  // Always return 200 so Cloud Run routes traffic; report degraded status in body
+  sendJson(res, 200, {
     status,
     service: SERVICE_NAME,
     version: SERVICE_VERSION,

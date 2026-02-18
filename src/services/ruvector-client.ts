@@ -403,7 +403,7 @@ export function createRuVectorClient(config?: Partial<RuVectorClientConfig>): Ru
   };
 
   if (!envConfig.apiKey) {
-    throw new Error('RUVECTOR_API_KEY environment variable is required');
+    console.warn('RUVECTOR_API_KEY not set — ruvector client will fail on requests');
   }
 
   return new RuVectorClient(envConfig);
