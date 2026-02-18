@@ -16,6 +16,7 @@
  * - /agents/self-optimizing-agent/*            - Self-Optimizing Agent
  * - /agents/token-optimization-agent/*         - Token Optimization Agent
  * - /agents/model-selection-agent/*            - Model Selection Agent
+ * - POST /api/v1/optimize                     - Automation-core event ingestion
  *
  * @module server
  */
@@ -183,6 +184,29 @@ async function handleReady(res: ServerResponse): Promise<void> {
     service: SERVICE_NAME,
     version: SERVICE_VERSION,
     timestamp: new Date().toISOString(),
+  });
+}
+
+async function handleOptimizeEvent(parsed: ParsedRequest, res: ServerResponse): Promise<void> {
+  const body = parsed.body as Record<string, unknown> | undefined;
+
+  if (!body || typeof body.source !== 'string' || typeof body.event_type !== 'string' || typeof body.execution_id !== 'string') {
+    sendError(res, 400, 'INVALID_REQUEST', 'Missing required fields: source, event_type, execution_id');
+    return;
+  }
+
+  console.log(JSON.stringify({
+    level: 'info',
+    message: 'optimize_event_received',
+    source: body.source,
+    event_type: body.event_type,
+    execution_id: body.execution_id,
+    timestamp: body.timestamp || new Date().toISOString(),
+  }));
+
+  sendJson(res, 202, {
+    status: 'accepted',
+    execution_id: body.execution_id,
   });
 }
 
@@ -423,6 +447,9 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
         break;
       case parsed.path.startsWith('/agents/'):
         await routeToAgent(parsed, res);
+        break;
+      case parsed.path === '/api/v1/optimize' && parsed.method === 'POST':
+        await handleOptimizeEvent(parsed, res);
         break;
       default:
         sendError(res, 404, 'NOT_FOUND', `Path not found: ${parsed.path}`);
