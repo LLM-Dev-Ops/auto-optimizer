@@ -153,10 +153,11 @@ function sendError(res: ServerResponse, status: number, code: string, message: s
 // ============================================================================
 
 async function handleHealth(res: ServerResponse): Promise<void> {
-  // Check ruvector-service connectivity
+  // Check ruvector-service connectivity with a short timeout (3s, no retries)
+  // so health checks respond quickly even when ruvector is down
   let ruvectorStatus = 'unknown';
   try {
-    const client = createRuVectorClient();
+    const client = createRuVectorClient({ timeout: 3000, enableRetry: false });
     const health = await client.checkHealth();
     ruvectorStatus = health.status;
   } catch {
@@ -494,7 +495,7 @@ function simpleHash(input: string): string {
 
 const server = createServer(handleRequest);
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(JSON.stringify({
     level: 'info',
     message: 'server_started',
