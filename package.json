@@ -2,7 +2,7 @@
   "name": "@llm-auto-optimizer/core",
   "version": "0.1.0",
   "description": "Intelligent LLM model optimization system with webhook notifications",
-  "main": "dist/index.js",
+  "main": "dist/functions.js",
   "types": "dist/index.d.ts",
   "publishConfig": {
     "access": "public",
@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/globalbusinessadvisors/llm-auto-optimizer#readme",
   "scripts": {
+    "gcp-build": "",
     "build": "tsc",
     "test": "jest",
     "test:watch": "jest --watch",

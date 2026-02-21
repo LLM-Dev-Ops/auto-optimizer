@@ -1,6 +1,5 @@
 .git/
 node_modules/
-dist/
 target/
 crates/
 tests/
@@ -11,6 +10,7 @@ benchmarks/
 examples/
 plans/
 scripts/
+src/
 *.md
 *.log
 *.env
@@ -19,5 +19,8 @@ scripts/
 Thumbs.db
 docker-compose*.yml
 .dockerignore
+Dockerfile
+cloudbuild.yaml
 .vscode/
 .idea/
+tsconfig.json
