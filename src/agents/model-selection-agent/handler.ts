@@ -211,13 +211,15 @@ export class ModelSelectionAgentHandler {
       body = request.body;
     }
 
-    if (!body) {
+    if (!body || typeof body !== 'object') {
       throw new ValidationError('Request body is required');
     }
 
-    // Validate against schema
+    const obj = body as Record<string, unknown>;
+    obj.performance_history = normalizePerformanceHistory(obj.performance_history);
+
     try {
-      validateModelSelectionInput(body);
+      validateModelSelectionInput(obj);
     } catch (error) {
       if (error instanceof Error) {
         throw new ValidationError(error.message);
@@ -225,7 +227,7 @@ export class ModelSelectionAgentHandler {
       throw error;
     }
 
-    return body as ModelSelectionAgentInput;
+    return obj as unknown as ModelSelectionAgentInput;
   }
 
   // --------------------------------------------------------------------------
@@ -283,6 +285,19 @@ export class ModelSelectionAgentHandler {
   private handleError(error: unknown): HttpResponse {
     console.error('[ModelSelectionAgentHandler] Error:', error);
 
+    if (error instanceof InsufficientTelemetryError) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          code: 'INSUFFICIENT_TELEMETRY',
+          message: error.message,
+          details: error.details,
+        },
+        agent_id: AGENT_ID,
+        timestamp: new Date().toISOString(),
+      };
+      return this.json(400, errorResponse);
+    }
+
     if (error instanceof ValidationError) {
       const errorResponse: ErrorResponse = {
         error: {
@@ -338,6 +353,88 @@ class ValidationError extends Error {
     super(message);
     this.name = 'ValidationError';
   }
+}
+
+class InsufficientTelemetryError extends Error {
+  constructor(message: string, public readonly details?: Record<string, unknown>) {
+    super(message);
+    this.name = 'InsufficientTelemetryError';
+  }
+}
+
+// ============================================================================
+// Performance History Normalization
+// ============================================================================
+
+// Accepts the nested shape ({ by_model, by_task_type, total_requests, data_window })
+// or a flat `{ <model-id>: metrics }` map (what the CLI sends). When the
+// caller uses the flat shape, wrap it into the nested structure the agent
+// expects. Mirrors the one-level `X.by_model` convention the token agent uses.
+function normalizePerformanceHistory(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object') {
+    throw new InsufficientTelemetryError(
+      'performance_history field is missing or not an object',
+      { received_type: typeof raw }
+    );
+  }
+
+  const ph = raw as Record<string, unknown>;
+
+  const hasByModel =
+    ph.by_model && typeof ph.by_model === 'object' &&
+    Object.keys(ph.by_model as Record<string, unknown>).length > 0;
+
+  if (hasByModel) {
+    console.log(JSON.stringify({
+      level: 'info',
+      agent: AGENT_ID,
+      message: 'performance_history_shape',
+      shape: 'nested',
+      model_ids: Object.keys(ph.by_model as Record<string, unknown>),
+    }));
+    return {
+      by_model: ph.by_model,
+      by_task_type: ph.by_task_type && typeof ph.by_task_type === 'object' ? ph.by_task_type : {},
+      total_requests: typeof ph.total_requests === 'number' ? ph.total_requests : 0,
+      data_window: ph.data_window ?? { start: '', end: '', granularity: 'hour' },
+    };
+  }
+
+  const entries = Object.entries(ph).filter(
+    ([, v]) => v && typeof v === 'object' && !Array.isArray(v)
+  );
+
+  if (entries.length === 0) {
+    throw new InsufficientTelemetryError(
+      'performance_history must contain either a nested `by_model` map or a non-empty flat map keyed by model id',
+      { received_keys: Object.keys(ph) }
+    );
+  }
+
+  const byModel: Record<string, unknown> = {};
+  let totalRequests = 0;
+  for (const [modelId, entry] of entries) {
+    const e = entry as Record<string, any>;
+    if (!e.model_id) e.model_id = modelId;
+    byModel[modelId] = e;
+    const rc = typeof e.request_count === 'number' ? e.request_count : 0;
+    totalRequests += rc;
+  }
+
+  console.log(JSON.stringify({
+    level: 'info',
+    agent: AGENT_ID,
+    message: 'performance_history_shape',
+    shape: 'flat_by_model_id',
+    model_ids: Object.keys(byModel),
+  }));
+
+  return {
+    by_model: byModel,
+    by_task_type: {},
+    total_requests: totalRequests,
+    data_window: { start: '', end: '', granularity: 'hour' },
+  };
 }
 
 // ============================================================================

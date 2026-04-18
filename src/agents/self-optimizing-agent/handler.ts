@@ -175,13 +175,15 @@ export class SelfOptimizingAgentHandler {
       body = request.body;
     }
 
-    if (!body) {
+    if (!body || typeof body !== 'object') {
       throw new ValidationError('Request body is required');
     }
 
-    // Validate against schema
+    const obj = body as Record<string, unknown>;
+    obj.telemetry = normalizeTelemetry(obj.telemetry);
+
     try {
-      validateInput(body);
+      validateInput(obj);
     } catch (error) {
       if (error instanceof Error) {
         throw new ValidationError(error.message);
@@ -189,7 +191,7 @@ export class SelfOptimizingAgentHandler {
       throw error;
     }
 
-    return body as SelfOptimizingAgentInput;
+    return obj as unknown as SelfOptimizingAgentInput;
   }
 
   // --------------------------------------------------------------------------
@@ -247,6 +249,19 @@ export class SelfOptimizingAgentHandler {
   private handleError(error: unknown): HttpResponse {
     console.error('[SelfOptimizingAgentHandler] Error:', error);
 
+    if (error instanceof InsufficientTelemetryError) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          code: 'INSUFFICIENT_TELEMETRY',
+          message: error.message,
+          details: error.details,
+        },
+        agent_id: AGENT_ID,
+        timestamp: new Date().toISOString(),
+      };
+      return this.json(400, errorResponse);
+    }
+
     if (error instanceof ValidationError) {
       const errorResponse: ErrorResponse = {
         error: {
@@ -302,6 +317,154 @@ class ValidationError extends Error {
     super(message);
     this.name = 'ValidationError';
   }
+}
+
+class InsufficientTelemetryError extends Error {
+  constructor(message: string, public readonly details?: Record<string, unknown>) {
+    super(message);
+    this.name = 'InsufficientTelemetryError';
+  }
+}
+
+// ============================================================================
+// Telemetry Normalization
+// ============================================================================
+
+// Accepts the nested shape the agent was originally designed for, OR the
+// flat `{ by_model: { <model-id>: {...} } }` shape the CLI sends (matching
+// the convention used by the token-optimization agent). Projects the flat
+// shape into the nested cost/latency/quality structures the agent reads.
+function normalizeTelemetry(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object') {
+    throw new InsufficientTelemetryError(
+      'telemetry field is missing or not an object',
+      { received_type: typeof raw }
+    );
+  }
+
+  const t = raw as Record<string, unknown>;
+
+  const hasNested =
+    t.cost_metrics && typeof t.cost_metrics === 'object' &&
+    t.latency_metrics && typeof t.latency_metrics === 'object' &&
+    t.quality_metrics && typeof t.quality_metrics === 'object';
+
+  if (hasNested) {
+    console.log(JSON.stringify({
+      level: 'info',
+      agent: AGENT_ID,
+      message: 'telemetry_shape',
+      shape: 'nested',
+    }));
+    return {
+      ...t,
+      anomaly_signals: Array.isArray(t.anomaly_signals) ? t.anomaly_signals : [],
+      routing_history: Array.isArray(t.routing_history) ? t.routing_history : [],
+    };
+  }
+
+  const flat = t.by_model as Record<string, Record<string, unknown>> | undefined;
+  if (!flat || typeof flat !== 'object' || Object.keys(flat).length === 0) {
+    throw new InsufficientTelemetryError(
+      'telemetry must provide either nested { cost_metrics, latency_metrics, quality_metrics } or a non-empty { by_model } map',
+      { received_keys: Object.keys(t) }
+    );
+  }
+
+  console.log(JSON.stringify({
+    level: 'info',
+    agent: AGENT_ID,
+    message: 'telemetry_shape',
+    shape: 'flat_by_model',
+    model_ids: Object.keys(flat),
+  }));
+
+  const num = (v: unknown, fallback = 0) => {
+    const n = typeof v === 'number' ? v : Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const costByModel: Record<string, unknown> = {};
+  const latencyByModel: Record<string, unknown> = {};
+  const qualityByModel: Record<string, unknown> = {};
+  let totalCost = 0;
+  const p50s: number[] = [];
+  const p95s: number[] = [];
+  const p99s: number[] = [];
+  const scores: number[] = [];
+
+  for (const [modelId, entry] of Object.entries(flat)) {
+    const e = (entry ?? {}) as Record<string, any>;
+    const requestCount = num(e.request_count ?? e.requests);
+    const inputTokens = num(e.input_tokens ?? e.total_input_tokens);
+    const outputTokens = num(e.output_tokens ?? e.total_output_tokens);
+    const costUsd = num(e.cost_usd ?? e.total_cost_usd ?? e.cost?.total_cost_usd);
+    const avgCost = requestCount > 0
+      ? costUsd / requestCount
+      : num(e.avg_cost_per_request ?? e.cost?.avg_cost_per_request_usd);
+    totalCost += costUsd;
+
+    costByModel[modelId] = {
+      cost_usd: costUsd,
+      request_count: requestCount,
+      avg_cost_per_request: avgCost,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+    };
+
+    const p50 = num(e.latency?.p50_ms ?? e.p50_ms);
+    const p95 = num(e.latency?.p95_ms ?? e.p95_ms);
+    const p99 = num(e.latency?.p99_ms ?? e.p99_ms);
+    if (p50) p50s.push(p50);
+    if (p95) p95s.push(p95);
+    if (p99) p99s.push(p99);
+
+    latencyByModel[modelId] = {
+      p50_ms: p50,
+      p95_ms: p95,
+      p99_ms: p99,
+      request_count: requestCount,
+      timeout_rate: num(e.timeout_rate ?? e.availability?.timeout_rate),
+    };
+
+    const score = num(e.quality?.avg_score ?? e.quality_score ?? e.score, 0.85);
+    scores.push(score);
+    qualityByModel[modelId] = {
+      score,
+      sample_count: num(e.quality?.sample_count ?? e.sample_count, requestCount),
+      error_rate: num(e.quality?.error_rate ?? e.error_rate),
+    };
+  }
+
+  const mean = (arr: number[]) =>
+    arr.length === 0 ? 0 : arr.reduce((a, b) => a + b, 0) / arr.length;
+
+  return {
+    cost_metrics: {
+      total_cost_usd: totalCost,
+      by_model: costByModel,
+      by_provider: (t.by_provider as Record<string, number>) ?? {},
+      daily_trend: Array.isArray(t.daily_trend) ? (t.daily_trend as number[]) : [],
+    },
+    latency_metrics: {
+      p50_ms: mean(p50s),
+      p95_ms: mean(p95s),
+      p99_ms: mean(p99s),
+      avg_ms: mean(p50s),
+      by_model: latencyByModel,
+    },
+    quality_metrics: {
+      overall_score: mean(scores),
+      by_model: qualityByModel,
+      user_satisfaction: (t.user_satisfaction as Record<string, unknown>) ?? {
+        avg_rating: 0,
+        rating_count: 0,
+        positive_ratio: 0,
+      },
+    },
+    anomaly_signals: Array.isArray(t.anomaly_signals) ? t.anomaly_signals : [],
+    routing_history: Array.isArray(t.routing_history) ? t.routing_history : [],
+  };
 }
 
 // ============================================================================
