@@ -126,16 +126,16 @@ export class ModelSelectionAgentHandler {
     try {
       switch (path) {
         case '/health':
-          return this.handleHealth();
+          return await this.handleHealth();
 
         case '/analyze':
-          return this.handleAnalyze(request);
+          return await this.handleAnalyze(request);
 
         case '/recommend':
-          return this.handleRecommend(request);
+          return await this.handleRecommend(request);
 
         case '/simulate':
-          return this.handleSimulate(request);
+          return await this.handleSimulate(request);
 
         default:
           return this.notFound(path);
@@ -217,6 +217,7 @@ export class ModelSelectionAgentHandler {
 
     const obj = body as Record<string, unknown>;
     obj.performance_history = normalizePerformanceHistory(obj.performance_history);
+    obj.task_context = normalizeTaskContext(obj.task_context);
 
     try {
       validateModelSelectionInput(obj);
@@ -363,13 +364,15 @@ class InsufficientTelemetryError extends Error {
 }
 
 // ============================================================================
-// Performance History Normalization
+// Performance History & Task Context Normalization
 // ============================================================================
 
 // Accepts the nested shape ({ by_model, by_task_type, total_requests, data_window })
-// or a flat `{ <model-id>: metrics }` map (what the CLI sends). When the
-// caller uses the flat shape, wrap it into the nested structure the agent
-// expects. Mirrors the one-level `X.by_model` convention the token agent uses.
+// or a flat `{ <model-id>: metrics }` map (what the CLI sends). Projects each
+// per-model entry into the full ModelHistoricalMetrics shape the scoring code
+// reads (latency.p95_ms, cost.avg_cost_per_request_usd, quality.avg_score, etc.)
+// so that partial inputs like `{ avg_latency_ms, avg_quality, avg_cost,
+// request_count }` don't crash with `.quality.avg_score` undefined.
 function normalizePerformanceHistory(raw: unknown): unknown {
   if (!raw || typeof raw !== 'object') {
     throw new InsufficientTelemetryError(
@@ -385,17 +388,26 @@ function normalizePerformanceHistory(raw: unknown): unknown {
     Object.keys(ph.by_model as Record<string, unknown>).length > 0;
 
   if (hasByModel) {
+    const rawByModel = ph.by_model as Record<string, unknown>;
+    const byModel: Record<string, unknown> = {};
+    let totalRequests = 0;
+    for (const [modelId, entry] of Object.entries(rawByModel)) {
+      const projected = projectModelMetrics(modelId, entry);
+      byModel[modelId] = projected;
+      totalRequests += (projected as any).request_count || 0;
+    }
+
     console.log(JSON.stringify({
       level: 'info',
       agent: AGENT_ID,
       message: 'performance_history_shape',
       shape: 'nested',
-      model_ids: Object.keys(ph.by_model as Record<string, unknown>),
+      model_ids: Object.keys(byModel),
     }));
     return {
-      by_model: ph.by_model,
+      by_model: byModel,
       by_task_type: ph.by_task_type && typeof ph.by_task_type === 'object' ? ph.by_task_type : {},
-      total_requests: typeof ph.total_requests === 'number' ? ph.total_requests : 0,
+      total_requests: typeof ph.total_requests === 'number' ? ph.total_requests : totalRequests,
       data_window: ph.data_window ?? { start: '', end: '', granularity: 'hour' },
     };
   }
@@ -414,11 +426,9 @@ function normalizePerformanceHistory(raw: unknown): unknown {
   const byModel: Record<string, unknown> = {};
   let totalRequests = 0;
   for (const [modelId, entry] of entries) {
-    const e = entry as Record<string, any>;
-    if (!e.model_id) e.model_id = modelId;
-    byModel[modelId] = e;
-    const rc = typeof e.request_count === 'number' ? e.request_count : 0;
-    totalRequests += rc;
+    const projected = projectModelMetrics(modelId, entry);
+    byModel[modelId] = projected;
+    totalRequests += (projected as any).request_count || 0;
   }
 
   console.log(JSON.stringify({
@@ -434,6 +444,190 @@ function normalizePerformanceHistory(raw: unknown): unknown {
     by_task_type: {},
     total_requests: totalRequests,
     data_window: { start: '', end: '', granularity: 'hour' },
+  };
+}
+
+function toNumber(v: unknown, fallback = 0): number {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function inferProvider(modelId: string): string {
+  const id = modelId.toLowerCase();
+  if (id.startsWith('claude')) return 'anthropic';
+  if (id.startsWith('gpt') || id.startsWith('o1') || id.startsWith('o3')) return 'openai';
+  if (id.startsWith('gemini')) return 'google';
+  if (id.startsWith('llama') || id.startsWith('mistral') || id.startsWith('mixtral')) return 'meta';
+  return 'unknown';
+}
+
+// Projects a raw per-model metrics entry (either fully nested or the flat
+// shape the CLI sends) into a complete ModelHistoricalMetrics object.
+function projectModelMetrics(modelId: string, raw: unknown): Record<string, unknown> {
+  const e = (raw && typeof raw === 'object' ? raw : {}) as Record<string, any>;
+  const requestCount = toNumber(e.request_count ?? e.requests);
+
+  // Latency: prefer nested, fall back to flat fields.
+  const flatLatency = toNumber(e.avg_latency_ms ?? e.latency_ms ?? e.latency);
+  const nestedLatency = e.latency && typeof e.latency === 'object' ? e.latency : {};
+  const latency = {
+    p50_ms: toNumber(nestedLatency.p50_ms ?? e.p50_ms, flatLatency),
+    p95_ms: toNumber(nestedLatency.p95_ms ?? e.p95_ms, flatLatency ? flatLatency * 1.5 : 0),
+    p99_ms: toNumber(nestedLatency.p99_ms ?? e.p99_ms, flatLatency ? flatLatency * 2 : 0),
+    avg_ms: toNumber(nestedLatency.avg_ms ?? e.avg_latency_ms, flatLatency),
+  };
+
+  // Cost: prefer nested, fall back to flat fields.
+  const flatCost = toNumber(e.avg_cost ?? e.avg_cost_per_request ?? e.cost_per_request);
+  const nestedCost = e.cost && typeof e.cost === 'object' ? e.cost : {};
+  const avgCostPerReq = toNumber(nestedCost.avg_cost_per_request_usd, flatCost);
+  const cost = {
+    total_cost_usd: toNumber(nestedCost.total_cost_usd, avgCostPerReq * requestCount),
+    avg_cost_per_request_usd: avgCostPerReq,
+    input_cost_per_1k_tokens: toNumber(nestedCost.input_cost_per_1k_tokens),
+    output_cost_per_1k_tokens: toNumber(nestedCost.output_cost_per_1k_tokens),
+  };
+
+  // Quality: the flat CLI sends `avg_quality` — map it to avg_score.
+  const flatQuality = toNumber(e.avg_quality ?? e.quality_score ?? e.score, 0.85);
+  const nestedQuality = e.quality && typeof e.quality === 'object' ? e.quality : {};
+  const errorRate = toNumber(nestedQuality.error_rate ?? e.error_rate);
+  const quality = {
+    avg_score: toNumber(nestedQuality.avg_score, flatQuality),
+    error_rate: errorRate,
+    success_rate: toNumber(nestedQuality.success_rate, 1 - errorRate),
+    user_satisfaction: nestedQuality.user_satisfaction,
+  };
+
+  const nestedTokens = e.tokens && typeof e.tokens === 'object' ? e.tokens : {};
+  const tokens = {
+    total_input: toNumber(nestedTokens.total_input ?? e.total_input_tokens ?? e.input_tokens),
+    total_output: toNumber(nestedTokens.total_output ?? e.total_output_tokens ?? e.output_tokens),
+    avg_input: toNumber(nestedTokens.avg_input),
+    avg_output: toNumber(nestedTokens.avg_output),
+  };
+
+  const nestedAvailability = e.availability && typeof e.availability === 'object' ? e.availability : {};
+  const availability = {
+    uptime_pct: toNumber(nestedAvailability.uptime_pct ?? e.uptime_pct, 99.5),
+    timeout_rate: toNumber(nestedAvailability.timeout_rate ?? e.timeout_rate),
+    rate_limit_hit_rate: toNumber(nestedAvailability.rate_limit_hit_rate ?? e.rate_limit_hit_rate),
+  };
+
+  return {
+    model_id: e.model_id ?? modelId,
+    provider: e.provider ?? inferProvider(modelId),
+    request_count: requestCount,
+    latency,
+    cost,
+    quality,
+    tokens,
+    availability,
+  };
+}
+
+// Accepts either the nested TaskContext shape or the flat CLI shape
+// ({ expected_input_tokens: number, latency_requirements: { p95_ms },
+//    quality_requirements: { min_accuracy },
+//    budget_constraints: { max_cost_per_request } }) and projects into
+// the nested shape the scoring code reads.
+function normalizeTaskContext(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object') {
+    throw new ValidationError('task_context is required and must be an object');
+  }
+  const t = raw as Record<string, any>;
+
+  const inputTokens =
+    typeof t.expected_input_tokens === 'number'
+      ? {
+          min: Math.round(t.expected_input_tokens * 0.5),
+          max: Math.round(t.expected_input_tokens * 2),
+          avg: t.expected_input_tokens,
+        }
+      : t.expected_input_tokens && typeof t.expected_input_tokens === 'object'
+        ? {
+            min: toNumber(t.expected_input_tokens.min, 500),
+            max: toNumber(t.expected_input_tokens.max, 2000),
+            avg: toNumber(
+              t.expected_input_tokens.avg,
+              (toNumber(t.expected_input_tokens.min, 500) + toNumber(t.expected_input_tokens.max, 2000)) / 2
+            ),
+          }
+        : { min: 500, max: 2000, avg: 1000 };
+
+  const outputTokens =
+    typeof t.expected_output_tokens === 'number'
+      ? {
+          min: Math.round(t.expected_output_tokens * 0.5),
+          max: Math.round(t.expected_output_tokens * 2),
+          avg: t.expected_output_tokens,
+        }
+      : t.expected_output_tokens && typeof t.expected_output_tokens === 'object'
+        ? {
+            min: toNumber(t.expected_output_tokens.min, 250),
+            max: toNumber(t.expected_output_tokens.max, 1000),
+            avg: toNumber(
+              t.expected_output_tokens.avg,
+              (toNumber(t.expected_output_tokens.min, 250) + toNumber(t.expected_output_tokens.max, 1000)) / 2
+            ),
+          }
+        : { min: 250, max: 1000, avg: 500 };
+
+  const latencyRaw = (t.latency_requirements && typeof t.latency_requirements === 'object'
+    ? t.latency_requirements
+    : {}) as Record<string, any>;
+  const maxLatency = toNumber(
+    latencyRaw.max_latency_ms ?? latencyRaw.p95_ms ?? latencyRaw.max_ms ?? latencyRaw.max_latency,
+    2000
+  );
+  const latencyRequirements = {
+    max_latency_ms: maxLatency,
+    target_latency_ms: toNumber(
+      latencyRaw.target_latency_ms ?? latencyRaw.p50_ms ?? latencyRaw.target,
+      maxLatency * 0.7
+    ),
+    strict: Boolean(
+      latencyRaw.strict ??
+        (latencyRaw.p95_ms !== undefined || latencyRaw.max_latency_ms !== undefined)
+    ),
+  };
+
+  const qualityRaw = (t.quality_requirements && typeof t.quality_requirements === 'object'
+    ? t.quality_requirements
+    : {}) as Record<string, any>;
+  const qualityRequirements = {
+    min_quality_score: toNumber(
+      qualityRaw.min_quality_score ?? qualityRaw.min_accuracy ?? qualityRaw.min_score,
+      0.7
+    ),
+    strict: Boolean(
+      qualityRaw.strict ??
+        (qualityRaw.min_accuracy !== undefined || qualityRaw.min_quality_score !== undefined)
+    ),
+  };
+
+  const budgetRaw = (t.budget_constraints && typeof t.budget_constraints === 'object'
+    ? t.budget_constraints
+    : {}) as Record<string, any>;
+  const budgetConstraints = {
+    max_cost_per_request_usd: toNumber(
+      budgetRaw.max_cost_per_request_usd ?? budgetRaw.max_cost_per_request ?? budgetRaw.max_cost,
+      1.0
+    ),
+    cost_optimization_priority:
+      budgetRaw.cost_optimization_priority === 'high' ||
+      budgetRaw.cost_optimization_priority === 'low'
+        ? budgetRaw.cost_optimization_priority
+        : 'medium',
+  };
+
+  return {
+    ...t,
+    expected_input_tokens: inputTokens,
+    expected_output_tokens: outputTokens,
+    latency_requirements: latencyRequirements,
+    quality_requirements: qualityRequirements,
+    budget_constraints: budgetConstraints,
   };
 }
 
