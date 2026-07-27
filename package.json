@@ -40,12 +40,12 @@
     "uuid": "^9.0.1"
   },
   "optionalDependencies": {
-    "@llm-dev-ops/llm-cost-ops-sdk": "^0.1.0",
+    "@llm-dev-ops/llm-cost-ops-sdk": "^1.0.1",
     "@llm-devops/latency-lens": "^0.1.0",
     "@llm-dev-ops/sentinel-cli": "^0.1.0",
     "llm-shield-core": "^0.2.1",
     "@llm-dev-ops/observatory-sdk": "^0.1.0",
-    "@llm-dev-ops/llm-config-core": "^0.1.0"
+    "@llm-dev-ops/llm-config-core": "^0.5.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.11",
