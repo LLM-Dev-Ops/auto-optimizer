@@ -22,8 +22,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .build_server(true)
-        .build_client(true)
-        .out_dir("src/generated");
+        .build_client(true);
+    // No .out_dir override: lib.rs pulls these in with tonic::include_proto!,
+    // which resolves against OUT_DIR. Pointing out_dir at src/generated wrote
+    // the modules where nothing reads them and broke a clean checkout, since
+    // that directory is not committed and tonic_build does not create it.
 
     // Compile all proto files
     config.compile(&proto_files, &[proto_dir])?;

@@ -6,9 +6,8 @@
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
 [![Crates.io](https://img.shields.io/crates/v/llm-optimizer.svg)](https://crates.io/crates/llm-optimizer)
 [![npm](https://img.shields.io/npm/v/@llm-dev-ops/llm-auto-optimizer.svg)](https://www.npmjs.com/package/@llm-dev-ops/llm-auto-optimizer)
-[![Status](https://img.shields.io/badge/status-production--ready-brightgreen.svg)](https://github.com/globalbusinessadvisors/llm-auto-optimizer)
+[![Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/globalbusinessadvisors/llm-auto-optimizer)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![Coverage](https://img.shields.io/badge/coverage-88%25-brightgreen.svg)](docs/TEST_COVERAGE_REPORT.md)
 
 **Automatically optimize your LLM infrastructure with intelligent, real-time feedback loops**
 
@@ -24,18 +23,27 @@
 
 ## Overview
 
-The **LLM Auto Optimizer** is a production-ready, continuous feedback-loop agent that automatically adjusts model selection, prompt templates, and configuration parameters based on real-time performance, drift, latency, and cost data. Built entirely in Rust for maximum performance and reliability.
+The **LLM Auto Optimizer** is a continuous feedback-loop agent that automatically adjusts model selection, prompt templates, and configuration parameters based on real-time performance, drift, latency, and cost data. Built entirely in Rust.
 
-### Why LLM Auto Optimizer?
+> **Status: alpha.** Until this release, the workspace had no committed
+> `Cargo.lock` and its dependency graph had never been resolved, so nothing in
+> this README had been verified by a build. The lockfile now exists and CI runs
+> `cargo build --workspace --locked`. The subsystem table below is graded
+> against that build, not against intent. See
+> [ADR-0001](docs/adr/ADR-0001-substantiate-completeness-and-lock-dependencies.md).
 
-- 💰 **Reduce LLM costs by 30-60%** through intelligent model selection and prompt optimization
-- ⚡ **Sub-5-minute optimization cycles** for rapid adaptation to changing conditions
-- 🎯 **Multi-objective optimization** balancing quality, cost, and latency
-- 🛡️ **Production-grade reliability** with 99.9% availability target
-- 🚀 **Progressive canary deployments** with automatic rollback on degradation
-- 🔒 **Enterprise-ready** with comprehensive audit logging and compliance
-- 🌐 **Complete API coverage** with REST & gRPC endpoints
-- 🖥️ **Beautiful CLI tool** with 40+ commands for operations
+### What LLM Auto Optimizer aims to do
+
+These are design goals, not measured results. Nothing below has been benchmarked
+against a running build — see the graded table for what currently compiles.
+
+- 💰 Reduce LLM costs through intelligent model selection and prompt optimization
+- ⚡ Short optimization cycles for rapid adaptation to changing conditions
+- 🎯 Multi-objective optimization balancing quality, cost, and latency
+- 🚀 Progressive canary deployments with automatic rollback on degradation
+- 🔒 Audit logging for compliance use cases
+- 🌐 REST & gRPC endpoints
+- 🖥️ CLI for operations
 
 ---
 
@@ -43,21 +51,46 @@ The **LLM Auto Optimizer** is a production-ready, continuous feedback-loop agent
 
 ### Core Capabilities
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| **Feedback Collection** | OpenTelemetry + Kafka integration with circuit breaker, DLQ, rate limiting | ✅ Complete |
-| **Stream Processing** | Windowing (tumbling, sliding, session), aggregation, watermarking | ✅ Complete |
-| **Distributed State** | Redis/PostgreSQL backends with distributed locking, 3-tier caching | ✅ Complete |
-| **Analyzer Engine** | 5 analyzers: Performance, Cost, Quality, Pattern, Anomaly detection | ✅ Complete |
-| **Decision Engine** | 5 strategies: Model Selection, Caching, Rate Limiting, Batching, Prompt Optimization | ✅ Complete |
-| **Canary Deployments** | Progressive rollouts with automatic rollback and health monitoring | ✅ Complete |
-| **Storage Layer** | Multi-backend storage (PostgreSQL, Redis, Sled) with unified interface | ✅ Complete |
-| **REST API** | 27 endpoints with OpenAPI docs, auth, rate limiting | ✅ Complete |
-| **gRPC API** | 60+ RPCs across 7 services with streaming support | ✅ Complete |
-| **Integrations** | GitHub, Slack, Jira, Anthropic Claude, Webhooks | ✅ Complete |
-| **CLI Tool** | 40+ commands across 7 categories with interactive mode | ✅ Complete |
-| **Main Service Binary** | Complete orchestration with health monitoring & auto-recovery | ✅ Complete |
-| **Deployment** | Docker, Kubernetes, Helm, systemd with CI/CD | ✅ Complete |
+Graded against `cargo build --workspace --locked` and `cargo test --locked -p <crate>`
+on rustc 1.97.1, 2026-07-27. **No row is `✅ Complete`:** `✅ Complete` requires
+the subsystem's tests to pass in CI, and the workspace does not currently build.
+The "Description" column states what the code is *intended* to do and is not a
+verified claim.
+
+| Feature | Crate | Description | Status |
+|---------|-------|-------------|--------|
+| **Feedback Collection** | `collector` | OpenTelemetry + Kafka integration with circuit breaker, DLQ, rate limiting | 🚧 Library compiles; test targets do not |
+| **Stream Processing** | `processor` | Windowing (tumbling, sliding, session), aggregation, watermarking | ❌ Does not compile (28 errors) |
+| **Distributed State** | `processor::state` | Redis/PostgreSQL backends with distributed locking, 3-tier caching | ❌ Does not compile (in `processor`) |
+| **Analyzer Engine** | `analyzer` | 5 analyzers: Performance, Cost, Quality, Pattern, Anomaly detection | 🚧 Compiles; 1 test passes |
+| **Decision Engine** | `decision` | 5 strategies: Model Selection, Caching, Rate Limiting, Batching, Prompt Optimization | 🚧 Library compiles; test targets do not |
+| **Canary Deployments** | `actuator` | Progressive rollouts with automatic rollback and health monitoring | 🚧 Compiles; 1 test passes |
+| **Storage Layer** | `storage` | Multi-backend storage (PostgreSQL, Redis, Sled) with unified interface | 🚧 Compiles; 1 test passes |
+| **REST API** | `api-rest` | HTTP endpoints with OpenAPI docs, auth, rate limiting | ❌ Blocked — depends on `processor` |
+| **gRPC API** | `api-grpc` | RPC services with streaming support | ❌ Blocked — depends on `processor` |
+| **Integrations** | `integrations` | GitHub, Slack, Jira, Anthropic Claude, Webhooks | 🚧 Library compiles; test targets do not |
+| **CLI Tool** | `cli` | Command-line interface | ❌ Does not compile (6 errors) |
+| **Main Service Binary** | `llm-optimizer` | Service orchestration with health monitoring | ❌ Blocked — depends on `processor` |
+| **Deployment** | — | Docker, Kubernetes, Helm, systemd manifests | 📋 Manifests present, none validated by CI |
+
+**Legend:** ✅ Complete — builds and its tests pass in CI · 🚧 In progress —
+compiles, but not covered by passing tests · ❌ Does not compile · 📋 Present but
+unverified.
+
+**Measured totals:** 20 tests pass, across `types` (14), `config` (2), and
+`analyzer` / `actuator` / `storage` / `api` (1 each). The repo contains ~2,161
+`#[test]`/`#[tokio::test]` attributes; the rest are in targets that do not
+compile, so they have never run. Test suites in `collector`, `decision`,
+`integrations`, and `benchmarks` reference types and module paths that do not
+exist in their crates.
+
+**Known blockers**
+- `processor` fails on 14 never-type-fallback errors in its Redis code
+  (`state/redis_backend.rs`, `state/redis_backend_enterprise.rs`,
+  `storage/redis.rs`, `deduplication/mod.rs`). This is the single blocker for
+  `api-rest`, `api-grpc`, and `llm-optimizer`.
+- `cli` imports `rand` without declaring it, and uses the `Formatter` enum as
+  `&dyn Formatter` in `commands/run.rs`.
 
 ### Optimization Strategies
 
@@ -376,22 +409,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Component Overview
 
-| Component | Responsibility | Key Technologies | LOC | Tests | Status |
-|-----------|----------------|------------------|-----|-------|--------|
-| **Collector** | Gather feedback from LLM services | OpenTelemetry, Kafka, Circuit Breaker | 4,500 | 35 | ✅ |
-| **Processor** | Stream processing and aggregation | Windowing, Watermarks, State | 35,000 | 100+ | ✅ |
-| **Analyzer** | Detect patterns and anomalies | 5 statistical analyzers | 6,458 | 49 | ✅ |
-| **Decision** | Determine optimal configurations | 5 optimization strategies | 8,930 | 88 | ✅ |
-| **Actuator** | Deploy configuration changes | Canary rollouts, Rollback | 5,853 | 61 | ✅ |
-| **Storage** | Persist state and history | PostgreSQL, Redis, Sled | 8,718 | 83 | ✅ |
-| **REST API** | HTTP API endpoints | Axum, OpenAPI, JWT | 2,960 | 17 | ✅ |
-| **gRPC API** | RPC services with streaming | Tonic, Protocol Buffers | 4,333 | 15 | ✅ |
-| **Integrations** | External service connectors | GitHub, Slack, Jira, Claude | 12,000 | 100+ | ✅ |
-| **Main Binary** | Service orchestration | Tokio, Health monitoring | 3,130 | 20 | ✅ |
-| **CLI Tool** | Command-line interface | Clap, Interactive prompts | 2,551 | 40+ | ✅ |
-| **Deployment** | Infrastructure as code | Docker, K8s, Helm, systemd | 8,500 | N/A | ✅ |
+The "Tests" column below previously carried hand-typed counts that no test run
+produced. It now reports tests that actually pass, measured with
+`cargo test --locked -p <crate>` on rustc 1.97.1, 2026-07-27.
 
-**Total**: ~133,000 LOC production Rust code + 6,000 LOC TypeScript integrations
+| Component | Responsibility | Key Technologies | Tests passing | Status |
+|-----------|----------------|------------------|---------------|--------|
+| **Collector** | Gather feedback from LLM services | OpenTelemetry, Kafka, Circuit Breaker | — (tests do not compile) | 🚧 |
+| **Processor** | Stream processing and aggregation | Windowing, Watermarks, State | — (does not compile) | ❌ |
+| **Analyzer** | Detect patterns and anomalies | 5 statistical analyzers | 1 | 🚧 |
+| **Decision** | Determine optimal configurations | 5 optimization strategies | — (tests do not compile) | 🚧 |
+| **Actuator** | Deploy configuration changes | Canary rollouts, Rollback | 1 | 🚧 |
+| **Storage** | Persist state and history | PostgreSQL, Redis, Sled | 1 | 🚧 |
+| **REST API** | HTTP API endpoints | Axum, OpenAPI, JWT | — (blocked on `processor`) | ❌ |
+| **gRPC API** | RPC services with streaming | Tonic, Protocol Buffers | — (blocked on `processor`) | ❌ |
+| **Integrations** | External service connectors | GitHub, Slack, Jira, Claude | — (tests do not compile) | 🚧 |
+| **Main Binary** | Service orchestration | Tokio, Health monitoring | — (blocked on `processor`) | ❌ |
+| **CLI Tool** | Command-line interface | Clap, Interactive prompts | — (does not compile) | ❌ |
+| **Types** | Shared domain types | serde, chrono, uuid | 14 | 🚧 |
+| **Config** | Configuration loading | figment, notify | 2 | 🚧 |
+| **Deployment** | Infrastructure as code | Docker, K8s, Helm, systemd | N/A | 📋 |
+
+**Total: 20 tests passing.** Line-count figures previously given here were not
+reproduced by any tool and have been removed rather than restated unverified.
 
 ---
 
@@ -435,7 +475,8 @@ llm-auto-optimizer/
 └── monitoring/             # Grafana dashboards ✅
 ```
 
-**Legend:** ✅ Production Ready
+**Legend:** ✅ Directory is present in the tree. This marks existence, not
+verified behaviour — see the graded subsystem table above.
 
 ---
 
@@ -841,6 +882,6 @@ Made with ❤️ by the LLM DevOps Community
 
 ---
 
-**Status**: Production Ready | **Version**: 0.1.1 (Rust) / 0.1.2 (npm) | **License**: Apache 2.0
+**Status**: Alpha | **Version**: 0.1.1 (Rust) / 0.1.2 (npm) | **License**: Apache 2.0
 
 </div>
