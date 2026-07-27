@@ -29,12 +29,12 @@ The LLM Auto-Optimizer repository has been verified as **fully Phase 2B complian
 
 | Package | Version | Status | Purpose |
 |---------|---------|--------|---------|
-| `@llm-dev-ops/llm-cost-ops-sdk` | ^0.1.0 | DECLARED | Cost operations SDK |
+| `@llm-dev-ops/llm-cost-ops-sdk` | ^1.0.1 | DECLARED | Cost operations SDK |
 | `@llm-devops/latency-lens` | ^0.1.0 | DECLARED | Latency monitoring SDK |
 | `@llm-dev-ops/sentinel-cli` | ^0.1.0 | DECLARED | Sentinel integration |
 | `llm-shield-core` | ^0.2.1 | DECLARED | Security/policy SDK |
 | `@llm-dev-ops/observatory-sdk` | ^0.1.0 | DECLARED | Observability SDK |
-| `@llm-dev-ops/llm-config-core` | ^0.1.0 | DECLARED | Configuration SDK |
+| `@llm-dev-ops/llm-config-core` | ^0.5.0 | DECLARED | Configuration SDK |
 
 ---
 
