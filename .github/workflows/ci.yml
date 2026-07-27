@@ -92,14 +92,16 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build
-        run: cargo build --verbose --all-features
+      # --locked fails the build if Cargo.lock is absent or out of date with
+      # Cargo.toml, so the committed lockfile is what actually gets built.
+      - name: Build (locked)
+        run: cargo build --workspace --locked --verbose --all-features
 
       - name: Run tests
-        run: cargo test --verbose --all-features
+        run: cargo test --workspace --locked --verbose --all-features
 
       - name: Run doctests
-        run: cargo test --doc --all-features
+        run: cargo test --doc --workspace --locked --all-features
 
   # ============================================================================
   # Security Audit
@@ -140,7 +142,23 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Run tests with coverage
-        run: cargo tarpaulin --verbose --all-features --workspace --timeout 300 --out Xml
+        run: cargo tarpaulin --locked --verbose --all-features --workspace --timeout 300 --out Xml --out Json
+
+      # The coverage number is whatever tarpaulin just measured. Do not
+      # hand-write a coverage figure into README.md -- ADR-0001.
+      - name: Publish measured coverage
+        run: |
+          COV=$(python3 -c "import json;print(f\"{json.load(open('tarpaulin-report.json'))['coverage']:.2f}\")")
+          echo "Measured line coverage: ${COV}%"
+          echo "## Coverage: ${COV}%" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            cobertura.xml
+            tarpaulin-report.json
 
       - name: Upload to codecov
         uses: codecov/codecov-action@v3

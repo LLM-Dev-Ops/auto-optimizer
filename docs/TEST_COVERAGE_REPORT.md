@@ -1,4 +1,15 @@
-# Test Coverage Report
+# Test Coverage Report (HISTORICAL ESTIMATE — NOT MEASURED)
+
+> **This document is not evidence of coverage.** The ~88% figure below was
+> estimated from test scope by hand; no coverage tool produced it. At the time
+> it was written the workspace had no `Cargo.lock` and its dependency graph had
+> never resolved, so `cargo tarpaulin` could not have run at all.
+>
+> It is retained for historical context only. Per
+> [ADR-0001](adr/ADR-0001-substantiate-completeness-and-lock-dependencies.md)
+> it is no longer linked as the evidence for any README badge. For a real
+> number, see the `coverage` job in `.github/workflows/ci.yml`, which runs
+> `cargo tarpaulin` and publishes the measured value.
 
 **Generated**: 2025-11-10
 **LLM Auto Optimizer Version**: 0.1.0

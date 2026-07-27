@@ -36,13 +36,27 @@ readme = "README.md"
 # Internal crates
 llm-optimizer-types = { version = "0.1.0", path = "crates/types" }
 
-# LLM-Dev-Ops upstream dependencies (Phase 2B compile-time)
-llm-cost-ops = "0.1"
-llm-latency-lens = "0.1"
-sentinel = "0.1"
-llm-shield-core = "0.2"
-llm-observatory-core = "0.1"
-llm-config-manager = "0.1"
+# LLM-Dev-Ops upstream dependencies.
+#
+# Every entry is pinned to an explicit git source and rev. Do not reintroduce
+# bare registry versions here: `sentinel` on crates.io is an unrelated
+# sentinel-terminated slice library, not this platform's anomaly-detection
+# service, so a bare `sentinel = "0.1"` silently resolves to a foreign crate.
+# The platform crate is published as `llm-sentinel`.
+#
+# `llm-latency-lens` is not published to crates.io at all, and the previously
+# declared `llm-config-manager` crate does not exist under that name in any
+# source -- the config-manager workspace publishes `llm-config-core`.
+#
+# No workspace member references these yet, so they do not appear in
+# Cargo.lock. They are declared here so that the first member to adopt one
+# inherits a correct, pinned source rather than a name-squatted registry match.
+llm-cost-ops = { git = "https://github.com/LLM-Dev-Ops/cost-ops", rev = "aef76ae9c264b888abc60aace3dd6948f2422906" }
+llm-latency-lens = { git = "https://github.com/LLM-Dev-Ops/latency-lens", rev = "8370e90fa788959a0b80e3f9c4140422f3eccd69" }
+llm-sentinel = { git = "https://github.com/LLM-Dev-Ops/sentinel", rev = "504b0ea466620ffacfd7ea19993d5a62b71babdd" }
+llm-shield-core = { git = "https://github.com/LLM-Dev-Ops/shield", rev = "ff0fc18f5d2efea5e8a1c26e62c65a6608ee09e3" }
+llm-observatory-core = { git = "https://github.com/LLM-Dev-Ops/observatory", rev = "a7ddf44010f0fd14cfe26bc0f120817cfd668f4a" }
+llm-config-core = { git = "https://github.com/LLM-Dev-Ops/config-manager", rev = "ef60b9c8a9a2e25d0ed72886908c5a0fc1a174e5" }
 llm-optimizer-collector = { version = "0.1.0", path = "crates/collector" }
 llm-optimizer-processor = { version = "0.1.0", path = "crates/processor" }
 llm-optimizer-analyzer = { version = "0.1.0", path = "crates/analyzer" }
