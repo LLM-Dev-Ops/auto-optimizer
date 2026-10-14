@@ -3,6 +3,8 @@
  * Configures global test environment and utilities
  */
 
+export {};
+
 // Set test timeout
 jest.setTimeout(10000);
 
@@ -16,11 +18,17 @@ global.console = {
 };
 
 // Set test environment variables
-process.env.NODE_ENV = 'test';
-process.env.LOG_LEVEL = 'error';
+process.env.NODE_ENV = "test";
+process.env.LOG_LEVEL = "error";
 
 // Global test utilities
-global.sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+declare global {
+  // eslint-disable-next-line no-var
+  var sleep: (ms: number) => Promise<void>;
+}
+
+global.sleep = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 // Cleanup after each test
 afterEach(() => {

@@ -3,15 +3,20 @@
  * HMAC-SHA256 payload signing for secure webhook delivery
  */
 
-import { createHmac, timingSafeEqual } from 'crypto';
-import { WebhookPayload, WebhookSignature, WebhookError, WebhookErrorType } from './webhook-types';
+import { createHmac, timingSafeEqual } from "crypto";
+import {
+  WebhookPayload,
+  WebhookSignature,
+  WebhookError,
+  WebhookErrorType,
+} from "./webhook-types";
 
 /**
  * Webhook signature service for payload signing and verification
  */
 export class WebhookSignatureService {
-  private readonly algorithm = 'sha256';
-  private readonly encoding: BufferEncoding = 'hex';
+  private readonly algorithm = "sha256";
+  private readonly encoding = "hex" as const;
 
   /**
    * Generate HMAC-SHA256 signature for webhook payload
@@ -28,14 +33,22 @@ export class WebhookSignatureService {
   ): WebhookSignature {
     if (!secret || secret.trim().length === 0) {
       throw new WebhookError(
-        'Secret is required for signature generation',
+        "Secret is required for signature generation",
         WebhookErrorType.SIGNATURE_ERROR,
         undefined,
         false,
       );
     }
 
-    const signatureTimestamp = timestamp || Date.now();
+    const signatureTimestamp = timestamp ?? Date.now();
+    if (!Number.isSafeInteger(signatureTimestamp) || signatureTimestamp < 0) {
+      throw new WebhookError(
+        "Timestamp must be a non-negative safe integer",
+        WebhookErrorType.SIGNATURE_ERROR,
+        undefined,
+        false,
+      );
+    }
     const payloadString = this.serializePayload(payload, signatureTimestamp);
     const signature = this.computeHmac(payloadString, secret);
 
@@ -63,7 +76,14 @@ export class WebhookSignatureService {
     timestamp: number,
     toleranceMs: number = 300000, // 5 minutes
   ): boolean {
-    if (!secret || !signature) {
+    if (
+      !secret ||
+      !/^[a-f0-9]{64}$/.test(signature) ||
+      !Number.isSafeInteger(timestamp) ||
+      timestamp < 0 ||
+      !Number.isFinite(toleranceMs) ||
+      toleranceMs < 0
+    ) {
       return false;
     }
 
@@ -81,7 +101,11 @@ export class WebhookSignatureService {
     }
 
     try {
-      const expectedSignature = this.generateSignature(payload, secret, timestamp);
+      const expectedSignature = this.generateSignature(
+        payload,
+        secret,
+        timestamp,
+      );
       return this.constantTimeCompare(signature, expectedSignature.signature);
     } catch (error) {
       return false;
@@ -102,11 +126,11 @@ export class WebhookSignatureService {
     const signatureInfo = this.generateSignature(payload, secret);
 
     return {
-      'X-Webhook-Signature': signatureInfo.signature,
-      'X-Webhook-Timestamp': signatureInfo.timestamp.toString(),
-      'X-Webhook-Algorithm': signatureInfo.algorithm,
-      'X-Webhook-Event-Type': payload.eventType,
-      'X-Webhook-Event-Id': payload.id,
+      "X-Webhook-Signature": signatureInfo.signature,
+      "X-Webhook-Timestamp": signatureInfo.timestamp.toString(),
+      "X-Webhook-Algorithm": signatureInfo.algorithm,
+      "X-Webhook-Event-Type": payload.eventType,
+      "X-Webhook-Event-Id": payload.id,
     };
   }
 
@@ -121,30 +145,60 @@ export class WebhookSignatureService {
     timestamp: number;
     algorithm: string;
   } {
-    const signature = headers['x-webhook-signature'] || headers['X-Webhook-Signature'];
-    const timestampStr = headers['x-webhook-timestamp'] || headers['X-Webhook-Timestamp'];
-    const algorithm = headers['x-webhook-algorithm'] || headers['X-Webhook-Algorithm'];
+    const signature =
+      headers["x-webhook-signature"] || headers["X-Webhook-Signature"];
+    const timestampStr =
+      headers["x-webhook-timestamp"] || headers["X-Webhook-Timestamp"];
+    const algorithm =
+      headers["x-webhook-algorithm"] || headers["X-Webhook-Algorithm"];
 
-    if (!signature || !timestampStr) {
+    if (!signature || !timestampStr || !algorithm) {
       throw new WebhookError(
-        'Missing required signature headers',
+        "Missing required signature headers",
         WebhookErrorType.SIGNATURE_ERROR,
         undefined,
         false,
       );
     }
 
-    const timestamp = parseInt(timestampStr, 10);
-    if (isNaN(timestamp)) {
+    if (!/^[0-9]+$/.test(timestampStr)) {
       throw new WebhookError(
-        'Invalid timestamp in signature headers',
+        "Invalid timestamp in signature headers",
         WebhookErrorType.SIGNATURE_ERROR,
         undefined,
         false,
       );
     }
 
-    return { signature, timestamp, algorithm };
+    const timestamp = Number(timestampStr);
+    if (!Number.isSafeInteger(timestamp)) {
+      throw new WebhookError(
+        "Invalid timestamp in signature headers",
+        WebhookErrorType.SIGNATURE_ERROR,
+        undefined,
+        false,
+      );
+    }
+
+    if (algorithm.toLowerCase() !== this.algorithm) {
+      throw new WebhookError(
+        `Unsupported signature algorithm: ${algorithm}`,
+        WebhookErrorType.SIGNATURE_ERROR,
+        undefined,
+        false,
+      );
+    }
+
+    if (!/^[a-f0-9]{64}$/.test(signature)) {
+      throw new WebhookError(
+        "Invalid webhook signature encoding",
+        WebhookErrorType.SIGNATURE_ERROR,
+        undefined,
+        false,
+      );
+    }
+
+    return { signature, timestamp, algorithm: this.algorithm };
   }
 
   /**
@@ -218,8 +272,16 @@ export class WebhookSignatureService {
   public createDualSecretVerifier(
     oldSecret: string,
     newSecret: string,
-  ): (payload: WebhookPayload, signature: string, timestamp: number) => boolean {
-    return (payload: WebhookPayload, signature: string, timestamp: number): boolean => {
+  ): (
+    payload: WebhookPayload,
+    signature: string,
+    timestamp: number,
+  ) => boolean {
+    return (
+      payload: WebhookPayload,
+      signature: string,
+      timestamp: number,
+    ): boolean => {
       // Try new secret first
       if (this.verifySignature(payload, signature, newSecret, timestamp)) {
         return true;
@@ -237,8 +299,8 @@ export class WebhookSignatureService {
    * @returns Hex-encoded random secret
    */
   public static generateSecret(length: number = 32): string {
-    const crypto = require('crypto');
-    return crypto.randomBytes(length).toString('hex');
+    const crypto = require("crypto");
+    return crypto.randomBytes(length).toString("hex");
   }
 }
 
