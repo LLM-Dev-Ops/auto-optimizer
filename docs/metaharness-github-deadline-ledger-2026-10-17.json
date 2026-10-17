@@ -1,0 +1,608 @@
+{
+  "date": "2026-10-17",
+  "repository": "LLM-Dev-Ops/auto-optimizer",
+  "baseMain": "114865b4c3beb78b9fbeacbfc19ef93ab4501f97",
+  "resumedPRHead": "a13196ccb0e1aba13fea3dbe89b870e8892c03e2",
+  "worked": [
+    "auto-optimizer"
+  ],
+  "deferred": [
+    "RuVector",
+    "agentics-cli",
+    "agentics-cli-test",
+    "agentics-contracts",
+    "agentics-deployment-exporters",
+    "agentics-deployment-intent",
+    "agentics-diligence-artifacts",
+    "agentics-dream-machine",
+    "agentics-enforcement",
+    "agentics-evolution",
+    "agentics-execution-engine",
+    "agentics-orchestration-engine",
+    "agentics-org-manifests",
+    "agentics-platform",
+    "agentics-results-index",
+    "agentics-simulation-planner",
+    "agentics-simulation-runner",
+    "agentics-usage-ledger",
+    "analytics-hub",
+    "automation-core",
+    "benchmark-exchange",
+    "config-manager",
+    "connector-hub",
+    "copilot-agent",
+    "cost-ops",
+    "data-core",
+    "data-vault",
+    "ecosystem-core",
+    "edge-agent",
+    "enterprise-roi-engine",
+    "erp-surface",
+    "forge",
+    "governance-core",
+    "governance-dashboard",
+    "incident-manager",
+    "inference-gateway",
+    "infra",
+    "integrations",
+    "intelligence-core",
+    "interface-core",
+    "latency-lens",
+    "marketplace",
+    "memory-graph",
+    "observatory",
+    "orchestrator",
+    "platform-agents",
+    "policy-engine",
+    "registry",
+    "research-core",
+    "research-lab",
+    "ruvector-service",
+    "schema-registry",
+    "security-core",
+    "sentinel",
+    "shield",
+    "simulator",
+    "test-bench"
+  ],
+  "coverage": {
+    "repositories": 58,
+    "pagination": [
+      {
+        "offset": 0,
+        "returned": 58
+      },
+      {
+        "offset": 100,
+        "returned": 0
+      }
+    ],
+    "openPRs": 117,
+    "openPRPages": [
+      100,
+      17
+    ],
+    "repositoriesInspected": [
+      {
+        "repo": "agentics-cli",
+        "sha": "a6fa67a40fe3d08d51ff2c66d0f96e43a89ff9a6",
+        "ci": "success",
+        "run": 28767269473
+      },
+      {
+        "repo": "agentics-cli-test",
+        "sha": "fb73fe95db97bd35cfe378291004f09f2929675d"
+      },
+      {
+        "repo": "agentics-contracts",
+        "sha": "716a33348721f78a7a14bd98e6717e3b40470730"
+      },
+      {
+        "repo": "agentics-deployment-exporters",
+        "sha": "ea60a265f6fb9a89e0b2012ed7d0441cb6637168"
+      },
+      {
+        "repo": "agentics-deployment-intent",
+        "sha": "95111d9f55c7aba9c392b2eab08540b3a67e1d51"
+      },
+      {
+        "repo": "agentics-diligence-artifacts",
+        "sha": "131b0aaa8d316655d7d860bc9ffa38fea4767447"
+      },
+      {
+        "repo": "agentics-dream-machine",
+        "sha": "2fba2550182d81b36423447221823e98e227482a",
+        "ci": "failure",
+        "run": 39021093764
+      },
+      {
+        "repo": "agentics-enforcement",
+        "sha": "45277702166465be82fe2fa255aaa0dec0893994"
+      },
+      {
+        "repo": "agentics-evolution",
+        "sha": "855c0b2e9a53ade5ab2f06d4185b7c3c8fff0369",
+        "ci": "success",
+        "run": 31585157853
+      },
+      {
+        "repo": "agentics-execution-engine",
+        "sha": "accaf090c78cb0dfe439c771b2ecba868cdfbeac"
+      },
+      {
+        "repo": "agentics-orchestration-engine",
+        "sha": "a365c1a6f954041aefef67678fc3fe1b0b4eba7d"
+      },
+      {
+        "repo": "agentics-org-manifests",
+        "sha": "a52b61eea0e6b60883e436c982abc55bb9030edd"
+      },
+      {
+        "repo": "agentics-platform",
+        "sha": "9b3fa8d3faeda67230e953355eee1ab87112fcaf",
+        "ci": "failure",
+        "run": 30359780578
+      },
+      {
+        "repo": "agentics-results-index",
+        "sha": "876cd8cf38eb9e5687c92b73e8d3b8ac7e34e57c"
+      },
+      {
+        "repo": "agentics-simulation-planner",
+        "sha": "144a6c41b8532cfc0ae8bffe7e2f1676cb5068fe"
+      },
+      {
+        "repo": "agentics-simulation-runner",
+        "sha": "ead6a0f0b2f0af389c1cae6dc7b001ecfe7a90f8"
+      },
+      {
+        "repo": "agentics-usage-ledger",
+        "sha": "dbd63a6ae35a45f889170fc2ca3e611907506c45"
+      },
+      {
+        "repo": "analytics-hub",
+        "sha": "88f4ffa94afd4a14ec94c9b4b3dc723badc7fac1",
+        "ci": "failure",
+        "run": 38188081580
+      },
+      {
+        "repo": "auto-optimizer",
+        "sha": "114865b4c3beb78b9fbeacbfc19ef93ab4501f97",
+        "ci": "success",
+        "run": 38613202066
+      },
+      {
+        "repo": "automation-core",
+        "sha": "7833fc66f12a4233e73db81dc060e1482a4ea771"
+      },
+      {
+        "repo": "benchmark-exchange",
+        "sha": "09236748843306e9cc5f33cd91b0c9182c7b18e1",
+        "ci": "failure",
+        "run": 30302631143
+      },
+      {
+        "repo": "config-manager",
+        "sha": "02b463c3cbf088183f14b2ec951389f797863ac7",
+        "ci": "success",
+        "run": 38829562851
+      },
+      {
+        "repo": "connector-hub",
+        "sha": "b25fcb3bd9a06ae9e7d73c7acd677607123d081d",
+        "ci": "failure",
+        "run": 30302596307
+      },
+      {
+        "repo": "copilot-agent",
+        "sha": "756402a87e39419efa90a2accfe34b46083af945",
+        "ci": "failure",
+        "run": 30302673145
+      },
+      {
+        "repo": "cost-ops",
+        "sha": "aef76ae9c264b888abc60aace3dd6948f2422906",
+        "ci": "success",
+        "run": 39008663518
+      },
+      {
+        "repo": "data-core",
+        "sha": "d8a4d82b3918f2cf8aaf5fe003b5c351f184a9a9",
+        "ci": "success",
+        "run": 38734205492
+      },
+      {
+        "repo": "data-vault",
+        "sha": "01c0240871f03f0cbc0f497bff47360940bcb637",
+        "ci": "failure",
+        "run": 30302592934
+      },
+      {
+        "repo": "ecosystem-core",
+        "sha": "af3c7e8999c7b8d8891995994a0bd0958c445099"
+      },
+      {
+        "repo": "edge-agent",
+        "sha": "483c8a353855d8d54a1b1dee181f12376b5f592a",
+        "ci": "success",
+        "run": 38562684113
+      },
+      {
+        "repo": "enterprise-roi-engine",
+        "sha": "1f4d33cc057740f9f96e75e6c11b0dfd44cd35e7"
+      },
+      {
+        "repo": "erp-surface",
+        "sha": "188099d51ff1f1d4af944401d5fef18666317643",
+        "ci": "failure",
+        "run": 22001663894
+      },
+      {
+        "repo": "forge",
+        "sha": "4b5e43618b8fd1b8f63bddd24ff524510d9514bc",
+        "ci": "failure",
+        "run": 38994534648
+      },
+      {
+        "repo": "governance-core",
+        "sha": "a537d4a6cfe5081667415192cfb30b91c37a9e56"
+      },
+      {
+        "repo": "governance-dashboard",
+        "sha": "53047917da900f397a5045cfc7ddf5e32e735872",
+        "ci": "failure",
+        "run": 30302815912
+      },
+      {
+        "repo": "incident-manager",
+        "sha": "bcb8c8d027997c3363a9fd0ebd0ddc9c086227c6",
+        "ci": "success",
+        "run": 38052159946
+      },
+      {
+        "repo": "inference-gateway",
+        "sha": "a07a604dc14a3eeb2b9a07e85e9c41212156de9a",
+        "ci": "failure",
+        "run": 38008985239
+      },
+      {
+        "repo": "infra",
+        "sha": "a8bc89c190f63b139812f30a54e21a25b8f70e81"
+      },
+      {
+        "repo": "integrations",
+        "sha": "6c9b05037db6445a460e2446c2df7e01acb7b11f",
+        "ci": "failure",
+        "run": 20294303478
+      },
+      {
+        "repo": "intelligence-core",
+        "sha": "69aa70372e45279c22942fcee248884e753d8d93"
+      },
+      {
+        "repo": "interface-core",
+        "sha": "d4185560cf74b52fd44e515238cebeec88241371"
+      },
+      {
+        "repo": "latency-lens",
+        "sha": "8370e90fa788959a0b80e3f9c4140422f3eccd69",
+        "ci": "failure",
+        "run": 22300475883
+      },
+      {
+        "repo": "marketplace",
+        "sha": "70071f0eda8e8bf76574488f74779ed7f1229b47",
+        "ci": "failure",
+        "run": 30302618197
+      },
+      {
+        "repo": "memory-graph",
+        "sha": "d9b9dc5eb7ac313eedc2831dce6af46641bfaaa7",
+        "ci": "failure",
+        "run": 38985101510
+      },
+      {
+        "repo": "observatory",
+        "sha": "020f9031a2f1272d55deef0d6c715650b6647150",
+        "ci": "failure",
+        "run": 38326924256
+      },
+      {
+        "repo": "orchestrator",
+        "sha": "24b373c41cbac1d946fda31b7c86a5ff26037375",
+        "ci": "success",
+        "run": 30310547202
+      },
+      {
+        "repo": "platform-agents",
+        "sha": "94fbbc82db9cc10f66093df428560ef01aa2b322"
+      },
+      {
+        "repo": "policy-engine",
+        "sha": "c44b699eadc6b8dbbd26fa35d7cf82d61275979b"
+      },
+      {
+        "repo": "registry",
+        "sha": "322d9c90806a433b0363dffaac92c84ea50af886"
+      },
+      {
+        "repo": "research-core",
+        "sha": "5c86396ac8cf14a17517134ac811c6ea9fc347b7",
+        "ci": "success",
+        "run": 38659306826
+      },
+      {
+        "repo": "research-lab",
+        "sha": "83c4850c04d6243c1f700ec4a6a0e406a7d7198a",
+        "ci": "success",
+        "run": 38920009861
+      },
+      {
+        "repo": "RuVector",
+        "sha": "9e12078ae2af74d0613ae604266cf22fb1113b10"
+      },
+      {
+        "repo": "ruvector-service",
+        "sha": "9f030fd5939c2eb85cd9bd0b9618de84165bddda",
+        "ci": "success",
+        "run": 38164317697
+      },
+      {
+        "repo": "schema-registry",
+        "sha": "d0d89f267c32a2d31b622ad112836435c2534f39",
+        "ci": "failure",
+        "run": 30302600641
+      },
+      {
+        "repo": "security-core",
+        "sha": "e37520508c0eab91faf8977b80661dc68ac3826f"
+      },
+      {
+        "repo": "sentinel",
+        "sha": "504b0ea466620ffacfd7ea19993d5a62b71babdd",
+        "ci": "failure",
+        "run": 38445143556
+      },
+      {
+        "repo": "shield",
+        "sha": "1c46282495b94bb1fcae2d9e63cf34f495226699",
+        "ci": "success",
+        "run": 38398421866
+      },
+      {
+        "repo": "simulator",
+        "sha": "96091398ad2cb1189774d2581fb26c2bebe1abd9",
+        "ci": "failure",
+        "run": 37978961653
+      },
+      {
+        "repo": "test-bench",
+        "sha": "4d58c46426fe085d25fef3fcb35fa5e2cce83b30",
+        "ci": "failure",
+        "run": 38139330512
+      }
+    ]
+  },
+  "versions": {
+    "upstream": "e0dfd44da72b7adfb7c57fdd42d124be58ed7086",
+    "ruflo": "3.56.3",
+    "transformers": "4.3.1",
+    "metaharness": "0.4.17",
+    "darwin": "0.10.3",
+    "flywheel": "0.1.12",
+    "localNode": "24.19.0",
+    "hostedNode": "20.19.5",
+    "rust": "1.99.0",
+    "cargoAudit": "0.22.2"
+  },
+  "nodeGates": [
+    {
+      "id": "build",
+      "command": "npm run build",
+      "exit": 0,
+      "signal": null,
+      "outputSha256": "a799bd74f747c5516ae290bf39335806600c61a31c0d77649b91b39977ff54e2",
+      "tail": [
+        "",
+        "> @llm-auto-optimizer/core@0.1.0 build",
+        "> tsc",
+        "",
+        "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.",
+        ""
+      ]
+    },
+    {
+      "id": "github-strict-types",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --strict --esModuleInterop --target ES2022 --module commonjs --skipLibCheck src/integrations/github/github-client.ts",
+      "exit": 0,
+      "signal": null,
+      "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tail": [
+        ""
+      ]
+    },
+    {
+      "id": "lint",
+      "command": "npm run lint",
+      "exit": 2,
+      "signal": null,
+      "outputSha256": "f12476c14582eb7e9292623bc9412e19b4f717b52c03b0e80b1f81663cc55a96",
+      "tail": [
+        "",
+        "    npm init @eslint/config",
+        "",
+        "ESLint looked for configuration files in /workspace/scratch/4f25900b71ff/auto-optimizer-cycle/src/agentics and its ancestors. If it found none, it then looked in your home directory.",
+        "",
+        "If you think you already have a configuration file or if you need more help, please stop by the ESLint Discord server: https://eslint.org/chat",
+        "",
+        ""
+      ]
+    },
+    {
+      "id": "production-audit",
+      "command": "npm audit --omit=dev --audit-level=moderate",
+      "exit": 0,
+      "signal": null,
+      "outputSha256": "70d17afa06a0dda6a5ee3172326fe7062d7e9a2ad06b5733d035a730e9ddf71c",
+      "tail": [
+        "found 0 vulnerabilities",
+        "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.",
+        ""
+      ]
+    }
+  ],
+  "jest": {
+    "baseline": {
+      "passed": 101,
+      "failed": 0,
+      "failedSuites": 6,
+      "passedSuites": 4
+    },
+    "candidate": {
+      "passed": 203,
+      "failed": 0,
+      "failedSuites": 4,
+      "passedSuites": 8
+    },
+    "sourceHashes": {
+      "src/integrations/github/github-client.ts": "e2f1e68cfaa36ed363430a3f705a9a39b0b85c4d60580df223dd23ef169cc309",
+      "src/integrations/github/github-auth.ts": "e8843fa51ed667c24cd83ec17976e4fc462090f4dabadf7d212ee602308b865d",
+      "tests/github-http-deadline.test.ts": "0608b9dee2265b2aed0b0d5b212dfbd52317a39d6709fe61cccff9f698eb2bc4",
+      "package-lock.json": "e12618e0699908f46d3e6fe900bc454abe63992898e6e9812a833c185f87f816",
+      "Cargo.lock": "46f99ae8e8e28bb3517d507dd68acd7fa97b3d817994bd7910aa63b342125112"
+    },
+    "darwin": [
+      {
+        "id": "baseline",
+        "surface": "planner",
+        "score": 0.135,
+        "testPassRate": 0,
+        "promoted": true,
+        "reason": "promoted: finalScore 0.1350 > parent 0.0000 + delta 0.05 (safety 1.00, no test regression)"
+      },
+      {
+        "id": "g1_v0",
+        "surface": "reviewer",
+        "score": 0.135,
+        "testPassRate": 0,
+        "promoted": false,
+        "reason": "not promoted: finalScore 0.1350 ≤ parent 0.1350 + delta 0.05"
+      },
+      {
+        "id": "g1_v1",
+        "surface": "scorePolicy",
+        "score": 0.135,
+        "testPassRate": 0,
+        "promoted": false,
+        "reason": "not promoted: finalScore 0.1350 ≤ parent 0.1350 + delta 0.05"
+      }
+    ]
+  },
+  "baselineNativeHTTP": "Compile-blocked; zero HTTP assertions executed, not four observed runtime failures",
+  "candidateNativeHTTP": {
+    "passed": 8,
+    "frozenCriteria": 4,
+    "compatibilityAnchors": 3,
+    "additionalStatusRegression": 1
+  },
+  "oauthUnitFixtures": {
+    "passed": 6,
+    "externalOAuthRequest": false
+  },
+  "rust": {
+    "test": {
+      "exit": 101,
+      "observedFailure": "processor: 28 compiler errors"
+    },
+    "build": {
+      "exit": 101,
+      "observedFailure": "CLI: 6 compiler errors after restoring protoc"
+    },
+    "fmt": {
+      "exit": 1
+    },
+    "clippy": {
+      "exit": 101,
+      "observedFailure": "types: derivable impl lint"
+    },
+    "audit": {
+      "exit": 1,
+      "vulnerabilities": 15,
+      "warnings": 10
+    },
+    "sourceOrLockChanged": false,
+    "prerequisites": "Idempotent research-lab bootstrap; OpenSSL 3.0.13; protobuf compiler/headers and libpq development headers"
+  },
+  "metaharness": {
+    "score": 82,
+    "hardConstraints": "6/6",
+    "exit": 0,
+    "scope": "Static fit, not proof of compiling the project"
+  },
+  "darwin": {
+    "command": "evolve . --generations 1 --children 2 --concurrency 1 --seed 2026101708 --sandbox real --selection pareto",
+    "exit": 0,
+    "model": "none; npm test fixed",
+    "winner": "baseline",
+    "variants": [
+      {
+        "id": "baseline",
+        "surface": "planner",
+        "score": 0.135,
+        "testPassRate": 0,
+        "promoted": true,
+        "reason": "promoted: finalScore 0.1350 > parent 0.0000 + delta 0.05 (safety 1.00, no test regression)"
+      },
+      {
+        "id": "g1_v0",
+        "surface": "reviewer",
+        "score": 0.135,
+        "testPassRate": 0,
+        "promoted": false,
+        "reason": "not promoted: finalScore 0.1350 ≤ parent 0.1350 + delta 0.05"
+      },
+      {
+        "id": "g1_v1",
+        "surface": "scorePolicy",
+        "score": 0.135,
+        "testPassRate": 0,
+        "promoted": false,
+        "reason": "not promoted: finalScore 0.1350 ≤ parent 0.1350 + delta 0.05"
+      }
+    ],
+    "noHarnessImprovement": true
+  },
+  "flywheel": {
+    "command": "node scripts/evaluate-github-deadline.mjs BASELINE CANDIDATE ISOLATED_TOOLS OUTPUT_JSON",
+    "componentOnly": true,
+    "primary": [
+      0,
+      1
+    ],
+    "webhookAnchors": [
+      43,
+      43
+    ],
+    "signedReplayChecks": 8,
+    "repositoryMergeAuthorized": false
+  },
+  "ruflo": {
+    "task": "task-mvccpw40",
+    "swarm": "swarm-1792238820384-rvz2qb",
+    "workers": 0,
+    "writer": 1
+  },
+  "coreMemory": {
+    "screened": false,
+    "playbooks": [],
+    "warnings": [],
+    "mapping": {
+      "rustCore": "No Rust source, manifests or lock changes",
+      "typeScript": "Integration request deadlines and strict API boundary checks",
+      "linuxFirst": "SHA-pinned Ubuntu 24.04, Node 20.19.5 validation",
+      "persistence": "No new persistence service or service-owned database; existing RuVector guidance retained",
+      "deployment": "No deployment, package publication or new paid infrastructure"
+    }
+  },
+  "outcome": "EXECUTED; GitHub component VALIDATED; full repository BLOCKED; NOT MERGED"
+}

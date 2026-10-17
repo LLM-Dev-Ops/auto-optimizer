@@ -17,7 +17,7 @@ import {
   GitHubAppConfig,
   GitHubOAuthToken,
   EncryptedString,
-  ScopeRequirement,
+  ScopeRequirement
 } from './github-types';
 
 // ============================================================================
@@ -29,48 +29,69 @@ const IV_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
 const SALT_LENGTH = 32;
 
+function isOAuthToken(value: unknown): value is GitHubOAuthToken {
+  if (!value || typeof value !== 'object') return false;
+  const fields = value as Record<string, unknown>;
+  return (
+    typeof fields.access_token === 'string' &&
+    fields.access_token.trim().length > 0 &&
+    typeof fields.token_type === 'string' &&
+    typeof fields.scope === 'string' &&
+    (fields.expires_in === undefined ||
+      (typeof fields.expires_in === 'number' &&
+        Number.isFinite(fields.expires_in) &&
+        fields.expires_in >= 0)) &&
+    (fields.refresh_token === undefined ||
+      typeof fields.refresh_token === 'string') &&
+    (fields.refresh_token_expires_in === undefined ||
+      (typeof fields.refresh_token_expires_in === 'number' &&
+        Number.isFinite(fields.refresh_token_expires_in) &&
+        fields.refresh_token_expires_in >= 0))
+  );
+}
+
 /**
  * Predefined scope requirements for common operations
  */
 export const SCOPE_REQUIREMENTS: Record<string, ScopeRequirement> = {
   REPO_READ: {
     required: ['repo'],
-    description: 'Read repository data',
+    description: 'Read repository data'
   },
   REPO_WRITE: {
     required: ['repo'],
-    description: 'Write to repositories',
+    description: 'Write to repositories'
   },
   ISSUE_READ: {
     required: ['repo'],
     optional: ['public_repo'],
-    description: 'Read issues',
+    description: 'Read issues'
   },
   ISSUE_WRITE: {
     required: ['repo'],
-    description: 'Create and modify issues',
+    description: 'Create and modify issues'
   },
   PR_READ: {
     required: ['repo'],
     optional: ['public_repo'],
-    description: 'Read pull requests',
+    description: 'Read pull requests'
   },
   PR_WRITE: {
     required: ['repo'],
-    description: 'Create and modify pull requests',
+    description: 'Create and modify pull requests'
   },
   WEBHOOK_ADMIN: {
     required: ['admin:repo_hook'],
-    description: 'Manage repository webhooks',
+    description: 'Manage repository webhooks'
   },
   ORG_READ: {
     required: ['read:org'],
-    description: 'Read organization data',
+    description: 'Read organization data'
   },
   ORG_WRITE: {
     required: ['admin:org'],
-    description: 'Manage organization',
-  },
+    description: 'Manage organization'
+  }
 };
 
 // ============================================================================
@@ -123,7 +144,7 @@ export function encryptToken(
       salt,
       iv,
       authTag,
-      Buffer.from(encrypted, 'hex'),
+      Buffer.from(encrypted, 'hex')
     ]);
 
     return result.toString('base64') as EncryptedString;
@@ -157,7 +178,9 @@ export function decryptToken(
       SALT_LENGTH + IV_LENGTH,
       SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH
     );
-    const encryptedData = buffer.subarray(SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH);
+    const encryptedData = buffer.subarray(
+      SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH
+    );
 
     // Derive encryption key
     const key = deriveKey(encryptionKey, salt);
@@ -167,7 +190,11 @@ export function decryptToken(
     decipher.setAuthTag(authTag);
 
     // Decrypt data
-    let decrypted = decipher.update(encryptedData.toString('hex'), 'hex', 'utf8');
+    let decrypted = decipher.update(
+      encryptedData.toString('hex'),
+      'hex',
+      'utf8'
+    );
     decrypted += decipher.final('utf8');
 
     return decrypted;
@@ -214,14 +241,14 @@ export function validateScopes(
     return {
       valid: false,
       missing,
-      message: `Missing required scopes for ${requirement.description}: ${missing.join(', ')}`,
+      message: `Missing required scopes for ${requirement.description}: ${missing.join(', ')}`
     };
   }
 
   return {
     valid: true,
     missing: [],
-    message: 'All required scopes are present',
+    message: 'All required scopes are present'
   };
 }
 
@@ -245,7 +272,10 @@ export function parseScopes(scopeString: string): string[] {
  * @param requiredScope - Scope or scope pattern to check
  * @returns True if scope is present
  */
-export function hasScope(grantedScopes: string[], requiredScope: string): boolean {
+export function hasScope(
+  grantedScopes: string[],
+  requiredScope: string
+): boolean {
   // Check for exact match
   if (grantedScopes.includes(requiredScope)) {
     return true;
@@ -362,8 +392,8 @@ export class GitHubAuthManager {
           headers: {
             Authorization: `Bearer ${jwt}`,
             Accept: 'application/vnd.github.v3+json',
-            'User-Agent': 'llm-auto-optimizer-github-integration/1.0.0',
-          },
+            'User-Agent': 'llm-auto-optimizer-github-integration/1.0.0'
+          }
         }
       );
 
@@ -373,6 +403,15 @@ export class GitHubAuthManager {
       }
 
       const data = await response.json();
+      if (
+        !data ||
+        typeof data !== 'object' ||
+        !('token' in data) ||
+        typeof data.token !== 'string' ||
+        data.token.trim().length === 0
+      ) {
+        throw new Error('Invalid installation token response');
+      }
       this.cachedToken = data.token;
       this.tokenExpiry = Date.now() + 3600000; // 1 hour
 
@@ -405,7 +444,7 @@ export class GitHubAuthManager {
     const payload = {
       iat: now - 60, // Issued 1 minute ago (clock skew)
       exp: now + 600, // Expires in 10 minutes
-      iss: config.appId,
+      iss: config.appId
     };
 
     // Sign JWT
@@ -520,10 +559,7 @@ export class GitHubAuthManager {
    * @param scopes - Token scopes
    * @returns Encrypted token configuration
    */
-  encryptAndStoreToken(
-    token: string,
-    scopes: string[]
-  ): GitHubTokenConfig {
+  encryptAndStoreToken(token: string, scopes: string[]): GitHubTokenConfig {
     if (!this.encryptionKey) {
       throw new Error('Encryption key not configured');
     }
@@ -532,7 +568,7 @@ export class GitHubAuthManager {
 
     return {
       token: encryptedToken,
-      scopes,
+      scopes
     };
   }
 }
@@ -556,7 +592,7 @@ export function getOAuthAuthorizationUrl(
     client_id: config.clientId,
     redirect_uri: config.callbackUrl,
     scope: config.scopes.join(' '),
-    state,
+    state
   });
 
   return `https://github.com/login/oauth/authorize?${params.toString()}`;
@@ -577,33 +613,38 @@ export async function exchangeOAuthCode(
   state?: string
 ): Promise<GitHubOAuthToken> {
   try {
-    const response = await fetch('https://github.com/login/oauth/access_token', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        code,
-        redirect_uri: config.callbackUrl,
-        state,
-      }),
-    });
+    const response = await fetch(
+      'https://github.com/login/oauth/access_token',
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+          code,
+          redirect_uri: config.callbackUrl,
+          state
+        })
+      }
+    );
 
     if (!response.ok) {
       const error = await response.text();
       throw new Error(`OAuth token exchange failed: ${error}`);
     }
 
-    const token: GitHubOAuthToken = await response.json();
+    const token: unknown = await response.json();
 
-    if ('error' in token) {
+    if (token && typeof token === 'object' && 'error' in token) {
       throw new Error(
         `OAuth error: ${(token as any).error_description || (token as any).error}`
       );
     }
+
+    if (!isOAuthToken(token)) throw new Error('Invalid OAuth token response');
 
     return token;
   } catch (error) {

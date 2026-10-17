@@ -27,6 +27,7 @@ import {
 import {
   RuVectorClient,
 } from '../../src/services/ruvector-client';
+import { buildInputFromCLI } from '../../src/agents/model-selection-agent/handler';
 
 // ============================================================================
 // Test Fixtures
@@ -670,7 +671,6 @@ describe('Model Selection Agent', () => {
 // ============================================================================
 
 describe('Model Selection CLI Helpers', () => {
-  const { buildInputFromCLI } = require('../../src/agents/model-selection-agent/handler');
 
   test('SHOULD build valid input from CLI params', () => {
     const params = {

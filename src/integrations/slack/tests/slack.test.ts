@@ -6,6 +6,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import type { EventHandler } from '../slack-webhooks';
+import type { CommandHandler } from '../slack-commands';
 import {
   SlackClient,
   createErrorBlock,
@@ -471,7 +473,7 @@ describe('SlackWebhookProcessor', () => {
     });
 
     it('should process message events', async () => {
-      const messageHandler = jest.fn();
+      const messageHandler = jest.fn<EventHandler<MessageEvent>>();
       processor.onMessage(messageHandler);
 
       const event: MessageEvent = {
@@ -514,7 +516,7 @@ describe('SlackWebhookProcessor', () => {
     });
 
     it('should deduplicate events', async () => {
-      const messageHandler = jest.fn();
+      const messageHandler = jest.fn<EventHandler<MessageEvent>>();
       processor.onMessage(messageHandler);
 
       const event: MessageEvent = {
@@ -589,7 +591,7 @@ describe('SlashCommandRouter', () => {
 
   describe('Command Registration', () => {
     it('should register command', () => {
-      const handler = jest.fn();
+      const handler = jest.fn<CommandHandler>();
       router.command(
         {
           name: 'test',
@@ -604,7 +606,7 @@ describe('SlashCommandRouter', () => {
     });
 
     it('should remove command', () => {
-      const handler = jest.fn();
+      const handler = jest.fn<CommandHandler>();
       router.command(
         {
           name: 'test',
@@ -622,7 +624,7 @@ describe('SlashCommandRouter', () => {
 
   describe('Command Processing', () => {
     it('should process valid command', async () => {
-      const handler = jest.fn().mockReturnValue(createSuccessResponse('Success!'));
+      const handler = jest.fn<CommandHandler>().mockReturnValue(createSuccessResponse('Success!'));
 
       router.command(
         {
@@ -677,7 +679,7 @@ describe('SlashCommandRouter', () => {
     });
 
     it('should enforce rate limits', async () => {
-      const handler = jest.fn().mockReturnValue(createSuccessResponse('Success!'));
+      const handler = jest.fn<CommandHandler>().mockReturnValue(createSuccessResponse('Success!'));
 
       router.command(
         {

@@ -33,5 +33,25 @@ jobs:
       - name: Run webhook contract tests
         run: npm test -- --runInBand src/integrations/webhooks/tests/webhook.test.ts
 
+      - name: Run complete Jest suite
+        run: npm test -- --runInBand
+
       - name: Audit production dependencies
         run: npm audit --omit=dev
+
+  github-http:
+    name: GitHub HTTP deadline contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20.19.5
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Type-check the actual GitHub client
+        run: node node_modules/typescript/bin/tsc --noEmit --strict --esModuleInterop --target ES2022 --module commonjs --skipLibCheck src/integrations/github/github-client.ts
+      - name: Exercise real loopback HTTP and GitHub/auth regression tests
+        run: npm test -- --runInBand tests/github-http-deadline.test.ts tests/github-auth-response.test.ts src/integrations/github/tests/github.test.ts
+      - run: npm audit --omit=dev
