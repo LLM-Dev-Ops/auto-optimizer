@@ -604,5 +604,19 @@
       "deployment": "No deployment, package publication or new paid infrastructure"
     }
   },
-  "outcome": "EXECUTED; GitHub component VALIDATED; full repository BLOCKED; NOT MERGED"
+  "outcome": "EXECUTED; GitHub component VALIDATED; full repository BLOCKED; NOT MERGED",
+  "ciAuditIntegrity": {
+    "oldRun": 39032181744,
+    "oldJob": 117394720693,
+    "oldActionRegeneratedLock": true,
+    "hostedResolvedDependencies": 593,
+    "committedDependencies": 589,
+    "hostedVulnerabilities": 6,
+    "committedVulnerabilities": 15,
+    "tool": "cargo-audit 0.22.2",
+    "sharedAdvisoryDB": "64f92cdc64401fab47baa10e2e11fe382aa57155",
+    "ignoredAdvisories": [],
+    "correction": "Direct --file Cargo.lock audit, pinned toolchain/auditor/runner, before/after lock checksum and Git diff, read-only permissions",
+    "componentFlywheelNotRescored": true
+  }
 }

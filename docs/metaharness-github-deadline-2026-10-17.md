@@ -133,6 +133,25 @@ actual blocked outcome and persistence flags are reported on the PR.
 
 ## Coverage, remaining work and rollback
 
+### Security audit lock integrity
+
+Exact-head hosted logs revealed that actions-rs/audit-check runs
+`cargo generate-lockfile` before `cargo audit --json`. It audited 593 resolved
+dependencies and reported six vulnerabilities, while the unchanged committed
+lockfile audited locally has 589 dependencies and 15 vulnerabilities. Both used
+Cargo audit 0.22.2 and advisory DB revision
+`64f92cdc64401fab47baa10e2e11fe382aa57155`; neither had ignored advisories.
+This is a different dependency graph, not evidence that committed vulnerabilities
+were fixed. The original log is run 39032181744, Security Audit job 117394720693.
+
+The Security Audit job now uses pinned checkout/toolchain and Cargo audit 0.22.2
+on Ubuntu 24.04, audits the explicit committed Cargo.lock without regeneration,
+and always checks its original checksum and Git diff. Permissions are read-only.
+The security check retains its name, remains mandatory and still fails on the
+existing advisories. No advisory suppression or dependency change was made.
+The committed lock SHA-256 is
+`46f99ae8e8e28bb3517d507dd68acd7fa97b3d817994bd7910aa63b342125112`.
+
 Fully paginated 58 nonarchived repositories and all 117 open PRs. Current default
 branch and latest CI were inspected for every repository. Worked auto-optimizer;
 all other 57 repositories are named as deferred in the adjacent execution ledger.
