@@ -36,7 +36,7 @@ import {
   LoggingConfig,
   PaginationInfo,
   RequestMetadata,
-  ScopeRequirement,
+  ScopeRequirement
 } from './github-types';
 import GitHubAuthManager, { SCOPE_REQUIREMENTS } from './github-auth';
 
@@ -53,7 +53,7 @@ const DEFAULT_RATE_LIMIT_CONFIG: RateLimitConfig = {
   enableAutoThrottle: true,
   throttleThreshold: 100,
   enableQueueing: true,
-  maxQueueSize: 1000,
+  maxQueueSize: 1000
 };
 
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
@@ -61,7 +61,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   baseDelay: 1000,
   maxDelay: 30000,
   backoffMultiplier: 2,
-  retryableStatusCodes: [408, 429, 500, 502, 503, 504],
+  retryableStatusCodes: [408, 429, 500, 502, 503, 504]
 };
 
 const DEFAULT_LOGGING_CONFIG: LoggingConfig = {
@@ -69,7 +69,7 @@ const DEFAULT_LOGGING_CONFIG: LoggingConfig = {
   logResponses: true,
   logErrors: true,
   level: 'info',
-  redactSensitive: true,
+  redactSensitive: true
 };
 
 // ============================================================================
@@ -121,7 +121,7 @@ class RateLimiter {
       this.queue.push({
         resolve,
         reject,
-        timestamp: Date.now(),
+        timestamp: Date.now()
       });
     });
   }
@@ -173,7 +173,7 @@ class RateLimiter {
     this.refillTokens();
     return {
       available: this.tokens,
-      queued: this.queue.length,
+      queued: this.queue.length
     };
   }
 }
@@ -208,7 +208,7 @@ class Logger {
       timestamp: new Date(metadata.timestamp).toISOString(),
       method: metadata.method,
       url: this.redactUrl(metadata.url),
-      body: this.config.redactSensitive ? this.redactData(body) : body,
+      body: this.config.redactSensitive ? this.redactData(body) : body
     };
 
     this.log(level, message, data);
@@ -230,7 +230,7 @@ class Logger {
       requestId: metadata.requestId,
       duration: metadata.duration,
       status,
-      body: this.config.redactSensitive ? this.redactData(body) : body,
+      body: this.config.redactSensitive ? this.redactData(body) : body
     };
 
     this.log(level, message, data);
@@ -249,7 +249,7 @@ class Logger {
     const data = {
       requestId: metadata.requestId,
       error: error.message,
-      retryAttempt: metadata.retryAttempt,
+      retryAttempt: metadata.retryAttempt
     };
 
     this.log('error', message, data);
@@ -288,7 +288,7 @@ class Logger {
       'client_secret',
       'private_key',
       'password',
-      'authorization',
+      'authorization'
     ];
 
     const redacted = { ...data };
@@ -313,10 +313,7 @@ class Logger {
     if (!this.config.redactSensitive) return url;
 
     // Redact tokens in URL parameters
-    return url.replace(
-      /([?&])(access_token|token)=[^&]*/gi,
-      '$1$2=[REDACTED]'
-    );
+    return url.replace(/([?&])(access_token|token)=[^&]*/gi, '$1$2=[REDACTED]');
   }
 }
 
@@ -349,27 +346,24 @@ export class GitHubClient {
     this.timeout = config.timeout || DEFAULT_TIMEOUT;
 
     // Initialize authentication manager
-    this.authManager = new GitHubAuthManager(
-      config.auth,
-      config.encryptionKey
-    );
+    this.authManager = new GitHubAuthManager(config.auth, config.encryptionKey);
 
     // Initialize rate limiter
     this.rateLimiter = new RateLimiter({
       ...DEFAULT_RATE_LIMIT_CONFIG,
-      ...config.rateLimit,
+      ...config.rateLimit
     });
 
     // Initialize retry configuration
     this.retryConfig = {
       ...DEFAULT_RETRY_CONFIG,
-      ...config.retry,
+      ...config.retry
     };
 
     // Initialize logger
     this.logger = new Logger({
       ...DEFAULT_LOGGING_CONFIG,
-      ...config.logging,
+      ...config.logging
     });
   }
 
@@ -394,10 +388,14 @@ export class GitHubClient {
     if (options.type) params.append('type', options.type);
     if (options.sort) params.append('sort', options.sort);
     if (options.direction) params.append('direction', options.direction);
-    if (options.per_page) params.append('per_page', options.per_page.toString());
+    if (options.per_page)
+      params.append('per_page', options.per_page.toString());
     if (options.page) params.append('page', options.page.toString());
 
-    return this.request<Repository[]>('GET', `/user/repos?${params.toString()}`);
+    return this.request<Repository[]>(
+      'GET',
+      `/user/repos?${params.toString()}`
+    );
   }
 
   /**
@@ -407,7 +405,10 @@ export class GitHubClient {
    * @param repo - Repository name
    * @returns Repository data
    */
-  async getRepository(owner: string, repo: string): Promise<APIResponse<Repository>> {
+  async getRepository(
+    owner: string,
+    repo: string
+  ): Promise<APIResponse<Repository>> {
     await this.validateScopes(SCOPE_REQUIREMENTS.REPO_READ);
     return this.request<Repository>('GET', `/repos/${owner}/${repo}`);
   }
@@ -441,7 +442,11 @@ export class GitHubClient {
     options: UpdateRepositoryOptions
   ): Promise<APIResponse<Repository>> {
     await this.validateScopes(SCOPE_REQUIREMENTS.REPO_WRITE);
-    return this.request<Repository>('PATCH', `/repos/${owner}/${repo}`, options);
+    return this.request<Repository>(
+      'PATCH',
+      `/repos/${owner}/${repo}`,
+      options
+    );
   }
 
   /**
@@ -480,7 +485,8 @@ export class GitHubClient {
     if (options.sort) params.append('sort', options.sort);
     if (options.direction) params.append('direction', options.direction);
     if (options.since) params.append('since', options.since);
-    if (options.per_page) params.append('per_page', options.per_page.toString());
+    if (options.per_page)
+      params.append('per_page', options.per_page.toString());
     if (options.page) params.append('page', options.page.toString());
 
     return this.request<Issue[]>(
@@ -523,7 +529,11 @@ export class GitHubClient {
     options: CreateIssueOptions
   ): Promise<APIResponse<Issue>> {
     await this.validateScopes(SCOPE_REQUIREMENTS.ISSUE_WRITE);
-    return this.request<Issue>('POST', `/repos/${owner}/${repo}/issues`, options);
+    return this.request<Issue>(
+      'POST',
+      `/repos/${owner}/${repo}/issues`,
+      options
+    );
   }
 
   /**
@@ -595,7 +605,8 @@ export class GitHubClient {
     if (options.state) params.append('state', options.state);
     if (options.sort) params.append('sort', options.sort);
     if (options.direction) params.append('direction', options.direction);
-    if (options.per_page) params.append('per_page', options.per_page.toString());
+    if (options.per_page)
+      params.append('per_page', options.per_page.toString());
     if (options.page) params.append('page', options.page.toString());
 
     return this.request<PullRequest[]>(
@@ -719,7 +730,7 @@ export class GitHubClient {
       timestamp: startTime,
       method,
       url: `${this.baseUrl}${path}`,
-      retryAttempt,
+      retryAttempt
     };
 
     try {
@@ -736,20 +747,28 @@ export class GitHubClient {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
-      const response = await fetch(`${this.baseUrl}${path}`, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-          'User-Agent': this.userAgent,
-          'Content-Type': 'application/json',
-          'X-Request-Id': requestId,
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
+      let response: Response;
+      let data: T;
+      try {
+        response = await fetch(`${this.baseUrl}${path}`, {
+          method,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github.v3+json',
+            'User-Agent': this.userAgent,
+            'Content-Type': 'application/json',
+            'X-Request-Id': requestId
+          },
+          body: body ? JSON.stringify(body) : undefined,
+          signal: controller.signal
+        });
+        // A fetch resolves at headers, not when its body is complete. Keep the
+        // deadline active through JSON/error body consumption as well.
+        data = await this.parseResponse<T>(response);
+      } finally {
+        // Also release the timer when fetch or body parsing rejects.
+        clearTimeout(timeoutId);
+      }
 
       // Update rate limiter from headers
       const rateLimitInfo = this.extractRateLimitInfo(response.headers);
@@ -762,11 +781,16 @@ export class GitHubClient {
 
       // Handle response
       if (!response.ok) {
-        return this.handleErrorResponse(response, metadata, method, path, body, retryAttempt);
+        return this.handleErrorResponse(
+          response,
+          data as APIError,
+          metadata,
+          method,
+          path,
+          body,
+          retryAttempt
+        );
       }
-
-      // Parse response
-      const data = await this.parseResponse<T>(response);
 
       // Log response
       this.logger.logResponse(metadata, response.status, data);
@@ -779,7 +803,7 @@ export class GitHubClient {
         pagination,
         rateLimit: rateLimitInfo!,
         headers: Object.fromEntries(response.headers.entries()),
-        status: response.status,
+        status: response.status
       };
     } catch (error) {
       this.logger.logError(metadata, error as Error);
@@ -811,20 +835,19 @@ export class GitHubClient {
    */
   private async handleErrorResponse<T>(
     response: Response,
+    errorData: APIError,
     metadata: RequestMetadata,
     method: string,
     path: string,
     body: any,
     retryAttempt: number
   ): Promise<APIResponse<T>> {
-    const errorData = await this.parseResponse<APIError>(response);
-
     this.logger.logResponse(metadata, response.status, errorData);
 
     const error: APIError = {
-      message: errorData.message || response.statusText,
-      status: response.status,
       ...errorData,
+      message: errorData.message || response.statusText,
+      status: response.status
     };
 
     // Retry on retryable status codes
@@ -837,9 +860,7 @@ export class GitHubClient {
       return this.request<T>(method, path, body, retryAttempt + 1);
     }
 
-    throw new Error(
-      `GitHub API error (${error.status}): ${error.message}`
-    );
+    throw new Error(`GitHub API error (${error.status}): ${error.message}`);
   }
 
   /**
@@ -852,7 +873,9 @@ export class GitHubClient {
     const contentType = response.headers.get('content-type');
 
     if (contentType?.includes('application/json')) {
-      return response.json();
+      // Fetch returns unknown JSON; this generic API boundary is interpreted
+      // by the caller's response type, just like the text/JSON path below.
+      return response.json() as Promise<T>;
     }
 
     const text = await response.text();
@@ -881,7 +904,7 @@ export class GitHubClient {
       remaining: parseInt(remaining, 10),
       reset: parseInt(reset, 10),
       used: used ? parseInt(used, 10) : 0,
-      resource: resource || 'core',
+      resource: resource || 'core'
     };
   }
 
@@ -907,7 +930,7 @@ export class GitHubClient {
       hasNext: !!links.next,
       hasPrev: !!links.prev,
       nextPage: links.next ? parseInt(links.next.page || '', 10) : undefined,
-      prevPage: links.prev ? parseInt(links.prev.page || '', 10) : undefined,
+      prevPage: links.prev ? parseInt(links.prev.page || '', 10) : undefined
     };
   }
 
@@ -930,7 +953,7 @@ export class GitHubClient {
         const params = new URL(url).searchParams;
         links[rel] = {
           page: params.get('page'),
-          per_page: params.get('per_page'),
+          per_page: params.get('per_page')
         };
       }
     }

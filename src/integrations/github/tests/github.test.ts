@@ -13,7 +13,8 @@
  * @version 1.0.0
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+// This repository runs Jest, including its typed globals and mock functions.
+const vi = jest;
 import crypto from 'crypto';
 import GitHubClient from '../github-client';
 import GitHubAuthManager, {
@@ -341,7 +342,7 @@ describe('GitHub Client', () => {
         private: true,
       };
 
-      const mockRepo = { id: 1, name: 'new-repo', ...options };
+      const mockRepo = { id: 1, ...options };
 
       global.fetch = vi.fn().mockResolvedValue(createMockResponse(201, mockRepo));
 

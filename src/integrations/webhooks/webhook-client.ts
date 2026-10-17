@@ -3,8 +3,8 @@
  * Main delivery system with tracking, retries, and monitoring
  */
 
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import { v4 as uuidv4 } from 'uuid';
+import axios, { AxiosInstance, AxiosError } from "axios";
+import { v4 as uuidv4 } from "uuid";
 import {
   WebhookPayload,
   WebhookTarget,
@@ -18,10 +18,10 @@ import {
   WebhookErrorType,
   WebhookStatistics,
   DEFAULT_CLIENT_CONFIG,
-} from './webhook-types';
-import { webhookSignatureService } from './webhook-signatures';
-import { webhookRetryService } from './webhook-retry';
-import { WebhookQueue } from './webhook-queue';
+} from "./webhook-types";
+import { webhookSignatureService } from "./webhook-signatures";
+import { webhookRetryService } from "./webhook-retry";
+import { WebhookQueue } from "./webhook-queue";
 
 /**
  * Webhook delivery client with full tracking and retry support
@@ -32,14 +32,14 @@ export class WebhookClient {
   private targets: Map<string, WebhookTarget> = new Map();
   private deliveries: Map<string, WebhookDelivery> = new Map();
   private statistics: Map<string, number> = new Map();
-  private processingLoop?: NodeJS.Timer;
+  private processingLoop?: ReturnType<typeof setInterval>;
 
   constructor(private config: WebhookClientConfig = DEFAULT_CLIENT_CONFIG) {
     this.httpClient = axios.create({
       timeout: config.defaultTimeout,
       headers: {
-        'User-Agent': config.userAgent,
-        'Content-Type': 'application/json',
+        "User-Agent": config.userAgent,
+        "Content-Type": "application/json",
       },
       validateStatus: () => true, // Handle all status codes ourselves
     });
@@ -55,7 +55,7 @@ export class WebhookClient {
   public registerTarget(target: WebhookTarget): void {
     if (!target.url || !target.secret) {
       throw new WebhookError(
-        'Target must have url and secret',
+        "Target must have url and secret",
         WebhookErrorType.VALIDATION_ERROR,
         undefined,
         false,
@@ -154,8 +154,8 @@ export class WebhookClient {
 
       // Process delivery asynchronously
       this.deliverWebhook(item.delivery, item.target)
-        .then(result => this.handleDeliveryResult(result, item))
-        .catch(error => this.handleDeliveryError(error, item));
+        .then((result) => this.handleDeliveryResult(result, item))
+        .catch((error) => this.handleDeliveryError(error, item));
     }
   }
 
@@ -182,15 +182,19 @@ export class WebhookClient {
 
       // Merge headers
       const headers = {
-        ...signatureHeaders,
         ...target.headers,
+        ...signatureHeaders,
       };
 
       // Send request
-      const response = await this.httpClient.post(target.url, delivery.payload, {
-        headers,
-        timeout: target.timeout,
-      });
+      const response = await this.httpClient.post(
+        target.url,
+        delivery.payload,
+        {
+          headers,
+          timeout: target.timeout,
+        },
+      );
 
       const responseTime = Date.now() - startTime;
 
@@ -208,8 +212,8 @@ export class WebhookClient {
       const success = response.status >= 200 && response.status < 300;
 
       // Extract Retry-After header if present
-      const retryAfter = response.headers['retry-after']
-        ? parseInt(response.headers['retry-after'], 10)
+      const retryAfter = response.headers["retry-after"]
+        ? parseInt(response.headers["retry-after"], 10)
         : undefined;
 
       return {
@@ -219,7 +223,13 @@ export class WebhookClient {
         statusCode: response.status,
         responseTime,
         attemptNumber,
-        willRetry: !success && webhookRetryService.shouldRetry(delivery.attempts, target.retryConfig, response.status),
+        willRetry:
+          !success &&
+          webhookRetryService.shouldRetry(
+            delivery.attempts,
+            target.retryConfig,
+            response.status,
+          ),
         nextRetryAt: retryAfter,
       };
     } catch (error) {
@@ -278,7 +288,7 @@ export class WebhookClient {
       this.queue.complete(result.deliveryId);
 
       // Update statistics
-      this.updateStatistics(result.targetId, 'success');
+      this.updateStatistics(result.targetId, "success");
     } else if (result.willRetry) {
       // Schedule retry
       const nextRetryAt = webhookRetryService.calculateNextRetryTime(
@@ -298,7 +308,7 @@ export class WebhookClient {
       this.queue.moveToDeadLetter(item);
 
       // Update statistics
-      this.updateStatistics(result.targetId, 'dead_letter');
+      this.updateStatistics(result.targetId, "dead_letter");
     }
   }
 
@@ -309,7 +319,7 @@ export class WebhookClient {
    * @param item - Queue item
    */
   private handleDeliveryError(error: Error, item: any): void {
-    console.error('Webhook delivery error:', error);
+    console.error("Webhook delivery error:", error);
     this.queue.complete(item.delivery.id);
   }
 
@@ -324,15 +334,18 @@ export class WebhookClient {
   private createPayload<T>(
     eventType: WebhookEventType,
     data: T,
-    options: { correlationId?: string; metadata?: Record<string, unknown> } = {},
+    options: {
+      correlationId?: string;
+      metadata?: Record<string, unknown>;
+    } = {},
   ): WebhookPayload<T> {
     return {
       id: uuidv4(),
       eventType,
       timestamp: Date.now(),
-      source: 'llm-auto-optimizer',
+      source: "llm-auto-optimizer",
       data,
-      version: '1.0',
+      version: "1.0",
       correlationId: options.correlationId,
       metadata: options.metadata,
     };
@@ -345,8 +358,14 @@ export class WebhookClient {
    * @param target - Webhook target
    * @returns Webhook delivery
    */
-  private createDelivery(payload: WebhookPayload, target: WebhookTarget): WebhookDelivery {
-    const signature = webhookSignatureService.generateSignature(payload, target.secret);
+  private createDelivery(
+    payload: WebhookPayload,
+    target: WebhookTarget,
+  ): WebhookDelivery {
+    const signature = webhookSignatureService.generateSignature(
+      payload,
+      target.secret,
+    );
 
     return {
       id: uuidv4(),
@@ -367,7 +386,10 @@ export class WebhookClient {
    * @param targetIds - Optional specific target IDs
    * @returns Array of matching targets
    */
-  private getMatchingTargets(eventType: WebhookEventType, targetIds?: string[]): WebhookTarget[] {
+  private getMatchingTargets(
+    eventType: WebhookEventType,
+    targetIds?: string[],
+  ): WebhookTarget[] {
     const targets: WebhookTarget[] = [];
 
     for (const [id, target] of this.targets) {
@@ -382,7 +404,10 @@ export class WebhookClient {
       }
 
       // Check event filter
-      if (target.eventFilters.length > 0 && !target.eventFilters.includes(eventType)) {
+      if (
+        target.eventFilters.length > 0 &&
+        !target.eventFilters.includes(eventType)
+      ) {
         continue;
       }
 
@@ -399,7 +424,7 @@ export class WebhookClient {
    * @returns Webhook error type
    */
   private classifyError(error: AxiosError): WebhookErrorType {
-    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+    if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
       return WebhookErrorType.TIMEOUT_ERROR;
     }
 
@@ -481,10 +506,12 @@ export class WebhookClient {
       }
     }
 
-    stats.averageResponseTime = responseCount > 0 ? totalResponseTime / responseCount : 0;
-    stats.successRate = stats.totalDeliveries > 0
-      ? stats.successfulDeliveries / stats.totalDeliveries
-      : 0;
+    stats.averageResponseTime =
+      responseCount > 0 ? totalResponseTime / responseCount : 0;
+    stats.successRate =
+      stats.totalDeliveries > 0
+        ? stats.successfulDeliveries / stats.totalDeliveries
+        : 0;
 
     return stats;
   }
@@ -505,6 +532,8 @@ export class WebhookClient {
  * @param config - Optional client configuration
  * @returns Webhook client
  */
-export function createWebhookClient(config?: Partial<WebhookClientConfig>): WebhookClient {
+export function createWebhookClient(
+  config?: Partial<WebhookClientConfig>,
+): WebhookClient {
   return new WebhookClient({ ...DEFAULT_CLIENT_CONFIG, ...config });
 }
