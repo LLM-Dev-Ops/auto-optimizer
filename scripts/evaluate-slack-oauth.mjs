@@ -57,13 +57,13 @@ const baseSha=execFileSync('git',['rev-parse','HEAD'],{cwd:base,encoding:'utf8'}
 const headSha=execFileSync('git',['rev-parse','HEAD'],{cwd:head,encoding:'utf8'}).trim();
 const result=await runFlywheelGenerations({
   rootPolicy:{revision:baseSha},
-  proposer:async()=>({value:{revision:headSha},summary:'Bound Slack OAuth bodies and validate fields before token storage',inverse:{path:source,parentBytes,sha256:digest(parentBytes)}}),
+  proposer:async()=>({value:headSha,summary:'Bound Slack OAuth bodies and validate fields before token storage',inverse:{path:source,parentBytes,hash:digest(parentBytes)}}),
   evaluator:async(policy,suite)=>{
     const m=policy.revision===baseSha?baseline:candidate;
     const cases=suite.id==='oauth-holdout'?m.probe.holdout:m.probe.anchors;
     const primary=cases.filter(x=>x.passed).length/cases.length;
     return {primary,noopRate:1-primary,costPerWin:0,regressed:Object.values(m.checks).some(x=>!x.pass)||(m===candidate&&lost.length>0)};
-  },holdout:{id:'oauth-holdout',items:candidate.probe.holdout.map(x=>x.name)},anchor:{id:'oauth-anchor',items:candidate.probe.anchors.map(x=>x.name)},maxGenerations:1,signer:makeSigner(),promotionRule:meetsPromotionRule,dataSource:'LIVE',
+  },holdout:{id:'oauth-holdout',items:candidate.probe.holdout.map(x=>x.name)},anchor:{id:'oauth-anchor',items:candidate.probe.anchors.map(x=>x.name)},mutationTargets:['revision'],maxGenerations:1,signer:makeSigner(),promotionRule:meetsPromotionRule,dataSource:'LIVE',
 });
 const replay=verifyReplayBundle(result.replayBundle,{pinnedGateFingerprint:gate});
 writeFileSync(out,JSON.stringify({versions:{flywheel:'0.1.12',node:process.version},baseSha,headSha,frozen:Object.fromEntries(frozen.map(p=>[p,digest(readFileSync(join(base,p)))])),gate,measurements,lostPreviouslyPassing:lost,logs:cwd,result,replay,metricLimitations:'costPerWin=0 is neutral/unmeasured; noopRate is failed-contract ratio, not observed agent noops; transpiled runtime probe is not strict compile proof'},null,2));
