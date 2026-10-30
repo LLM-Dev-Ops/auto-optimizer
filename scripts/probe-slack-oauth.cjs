@@ -15,8 +15,8 @@ mod.paths = Module._nodeModulePaths(root); mod._compile(compiled, filename);
 const { SlackOAuthHandler } = mod.exports;
 const nativeFetch = global.fetch;
 const config = { botToken: 'fixture-token', signingSecret: 'fixture-secret', clientId: 'fixture-id', clientSecret: 'fixture-client-secret', redirectUri: 'https://example.invalid/callback', timeout: 75 };
-let reply, requests = 0;
-const server = http.createServer((req, res) => {
+let reply, requests = 0, origin;
+const makeServer = () => http.createServer((req, res) => {
   requests++; req.resume();
   res.writeHead(reply.status || 200, { 'content-type': 'application/json', connection: 'close' });
   if (reply.stall) { res.write('{'); return; }
@@ -30,6 +30,9 @@ async function check(list, name, fn) {
 }
 async function run(response, method, expectation) {
   reply = response;
+  const server = makeServer();
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  origin = `http://127.0.0.1:${server.address().port}`;
   const writes = [];
   const storage = { store: async (...args) => writes.push(args), retrieve: async () => null, delete: async () => {}, isExpired: async () => false };
   const handler = new SlackOAuthHandler(config, storage);
@@ -39,19 +42,18 @@ async function run(response, method, expectation) {
     : method === 'refreshToken' ? handler.refreshToken('T1', 'fixture-refresh')
     : method === 'testToken' ? handler.testToken('fixture-token') : handler.revokeToken('fixture-token');
   // Independent watchdog prevents a broken body deadline from hanging the probe.
+  let result, error;
   try {
-    const result = await Promise.race([operation, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('probe watchdog expired')), 400); })]);
-    await expectation(null, result, writes);
-  } catch (err) { await expectation(err, undefined, writes); }
-  finally { clearTimeout(timer); handler.cleanup(); server.closeAllConnections(); }
+    result = await Promise.race([operation, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('probe watchdog expired')), 400); })]);
+  } catch (err) { error = err; }
+  finally { clearTimeout(timer); handler.cleanup(); server.closeAllConnections(); await new Promise(resolve=>server.close(resolve)); }
+  await expectation(error, result, writes);
 }
 const invalid = async (err, result, writes) => {
   assert.equal(err?.code, 'INVALID_RESPONSE'); assert.equal(writes.length, 0);
   assert.equal(err.message.includes('fixture-access'), false);
 };
 async function main() {
-  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  const origin = `http://127.0.0.1:${server.address().port}`;
   global.fetch = (url, options) => nativeFetch(origin + new URL(url).pathname, options);
   try {
     for (const method of ['exchangeCode', 'refreshToken', 'revokeToken']) {
@@ -85,6 +87,6 @@ async function main() {
     });
     console.log(JSON.stringify({ holdout, anchors, requests, passed: holdout.every(x=>x.passed)&&anchors.every(x=>x.passed) }));
     process.exitCode = holdout.every(x=>x.passed)&&anchors.every(x=>x.passed) ? 0 : 1;
-  } finally { global.fetch = nativeFetch; server.closeAllConnections(); await new Promise(resolve=>server.close(resolve)); }
+  } finally { global.fetch = nativeFetch; }
 }
-main().catch(err => { console.error(err); process.exitCode = 1; server.closeAllConnections(); server.close(); });
+main().catch(err => { console.error(err); process.exitCode = 1; });

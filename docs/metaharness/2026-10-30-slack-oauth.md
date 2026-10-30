@@ -17,7 +17,9 @@ No latency improvement target or paid provider calls. GitHub Actions must valida
 the exact resulting commit. Preserve required approvals and main freshness.
 
 Before final comparison the identical fixture on both revisions was expanded to
-16 checks (the boolean auth-test body deadline). Explicit `Connection: close`
-avoids reusing sockets forcibly closed by prior stalled-body cleanup. The first
-candidate's 13/15 result is retained, not presented as acceptance; the stabilized
-fixture must be rerun against the unchanged original source and final candidate.
+16 checks (the boolean auth-test body deadline). A fresh loopback server/port per
+case, explicit `Connection: close`, and awaited socket cleanup prevent reusing
+sockets forcibly closed by prior stalled-body cleanup. Earlier 13/15 and 13/16
+results are retained, not presented as acceptance; the stabilized fixture must be
+rerun against the unchanged original source and final candidate. Probe assertion
+failures are not fed back into the operation-error callback.
