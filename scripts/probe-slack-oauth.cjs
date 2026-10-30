@@ -18,7 +18,7 @@ const config = { botToken: 'fixture-token', signingSecret: 'fixture-secret', cli
 let reply, requests = 0;
 const server = http.createServer((req, res) => {
   requests++; req.resume();
-  res.writeHead(reply.status || 200, { 'content-type': 'application/json' });
+  res.writeHead(reply.status || 200, { 'content-type': 'application/json', connection: 'close' });
   if (reply.stall) { res.write('{'); return; }
   res.end(reply.raw === undefined ? JSON.stringify(reply.body) : reply.raw);
 });
@@ -59,6 +59,7 @@ async function main() {
         assert.equal(err?.name, 'AbortError');
       }));
     }
+    await check(holdout, 'testToken: body deadline fails closed', () => run({ stall: true }, 'testToken', async (err, result) => { assert.ifError(err); assert.equal(result, false); }));
     for (const method of ['exchangeCode', 'refreshToken', 'revokeToken']) {
       await check(holdout, `${method}: reject non-2xx success body`, () => run({ status: 503, body: { ...good(), expires_in: 3600 } }, method, async (err, _, writes) => {
         assert.equal(err?.code, 'HTTP_ERROR'); assert.equal(writes.length, 0);
