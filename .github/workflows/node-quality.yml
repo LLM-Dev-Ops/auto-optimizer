@@ -72,4 +72,3 @@ jobs:
       - name: Exercise real loopback HTTP and GitHub/auth regression tests
         run: npm test -- --runInBand tests/github-http-deadline.test.ts tests/github-auth-response.test.ts src/integrations/github/tests/github.test.ts
       - run: npm audit --omit=dev
-

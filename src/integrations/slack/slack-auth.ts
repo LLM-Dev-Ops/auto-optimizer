@@ -560,4 +560,3 @@ export function validateScopes(scopes: string[]): { valid: boolean; errors: stri
 
 export { InMemoryTokenStorage, OAuthStateManager };
 export default SlackOAuthHandler;
-
