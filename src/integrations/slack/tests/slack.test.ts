@@ -397,6 +397,16 @@ describe('SlackOAuthHandler', () => {
 describe('SlackWebhookProcessor', () => {
   let processor: SlackWebhookProcessor;
   const signingSecret = 'test-signing-secret';
+  const signedRequest = (body: string): WebhookRequest => {
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    return {
+      body,
+      headers: {},
+      timestamp,
+      signature: 'v0=' + require('crypto').createHmac('sha256', signingSecret)
+        .update(`v0:${timestamp}:${body}`).digest('hex'),
+    };
+  };
 
   beforeEach(() => {
     processor = createWebhookProcessor(signingSecret);
@@ -461,12 +471,7 @@ describe('SlackWebhookProcessor', () => {
         token: 'test-token',
       });
 
-      const request: WebhookRequest = {
-        body,
-        headers: {},
-        timestamp: Math.floor(Date.now() / 1000).toString(),
-        signature: 'v0=dummy', // Will be skipped if verification disabled
-      };
+      const request = signedRequest(body);
 
       const result = await processor.processWebhook(request);
       expect(result).toEqual({ challenge });
@@ -496,12 +501,7 @@ describe('SlackWebhookProcessor', () => {
       };
 
       const body = JSON.stringify(payload);
-      const request: WebhookRequest = {
-        body,
-        headers: {},
-        timestamp: Math.floor(Date.now() / 1000).toString(),
-        signature: 'v0=dummy',
-      };
+      const request = signedRequest(body);
 
       await processor.processWebhook(request);
 
@@ -539,12 +539,7 @@ describe('SlackWebhookProcessor', () => {
       };
 
       const body = JSON.stringify(payload);
-      const request: WebhookRequest = {
-        body,
-        headers: {},
-        timestamp: Math.floor(Date.now() / 1000).toString(),
-        signature: 'v0=dummy',
-      };
+      const request = signedRequest(body);
 
       // Process same event twice
       await processor.processWebhook(request);

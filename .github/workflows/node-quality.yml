@@ -10,6 +10,24 @@ permissions:
   contents: read
 
 jobs:
+  slack-signature:
+    name: Slack signed-request boundary
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20.19.5
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Strictly check actual signature processor
+        run: node node_modules/typescript/bin/tsc --noEmit --strict --esModuleInterop --target ES2022 --lib ES2022 --types node --module commonjs --skipLibCheck src/integrations/slack/slack-webhooks.ts
+      - name: Probe runtime and native HTTP rejection paths
+        run: node scripts/probe-slack-signature.cjs .
+      - name: Signed fixtures and malformed-boundary regressions
+        run: npm test -- --runInBand tests/slack-signature-boundary.test.ts src/integrations/slack/tests/slack.test.ts
+
   slack-oauth:
     name: Slack OAuth HTTP and response contract
     runs-on: ubuntu-24.04
