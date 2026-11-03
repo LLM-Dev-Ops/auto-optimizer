@@ -37,20 +37,11 @@
     "@slack/web-api": "^6.11.2",
     "axios": "^1.6.2",
     "dotenv": "^16.3.1",
-    "uuid": "^9.0.1"
-  },
-  "optionalDependencies": {
-    "@llm-dev-ops/llm-cost-ops-sdk": "^1.0.1",
-    "@llm-devops/latency-lens": "^0.1.0",
-    "@llm-dev-ops/sentinel-cli": "^0.1.0",
-    "llm-shield-core": "^0.2.1",
-    "@llm-dev-ops/observatory-sdk": "^0.1.0",
-    "@llm-dev-ops/llm-config-core": "^0.5.0"
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.11",
     "@types/node": "^20.10.6",
-    "@types/uuid": "^9.0.7",
     "@typescript-eslint/eslint-plugin": "^6.17.0",
     "@typescript-eslint/parser": "^6.17.0",
     "eslint": "^8.56.0",

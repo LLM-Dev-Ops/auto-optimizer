@@ -3,7 +3,7 @@
  * Full test coverage for webhook delivery, signatures, retry, and queue management
  */
 
-import nock from 'nock';
+import nock from "nock";
 import {
   WebhookClient,
   WebhookSignatureService,
@@ -16,49 +16,58 @@ import {
   WebhookError,
   WebhookErrorType,
   DEFAULT_RETRY_CONFIG,
+  DEFAULT_CLIENT_CONFIG,
   createRetryConfig,
-} from '../index';
+} from "../index";
 
-describe('Webhook Signature Service', () => {
+describe("Webhook Signature Service", () => {
   let signatureService: WebhookSignatureService;
   let testPayload: WebhookPayload;
 
   beforeEach(() => {
     signatureService = new WebhookSignatureService();
     testPayload = {
-      id: 'test-123',
+      id: "test-123",
       eventType: WebhookEventType.OPTIMIZATION_COMPLETED,
       timestamp: Date.now(),
-      source: 'llm-auto-optimizer',
-      data: { test: 'data' },
-      version: '1.0',
+      source: "llm-auto-optimizer",
+      data: { test: "data" },
+      version: "1.0",
     };
   });
 
-  describe('generateSignature', () => {
-    it('should generate valid HMAC-SHA256 signature', () => {
-      const secret = 'test-secret-key';
+  describe("generateSignature", () => {
+    it("should generate valid HMAC-SHA256 signature", () => {
+      const secret = "test-secret-key";
       const signature = signatureService.generateSignature(testPayload, secret);
 
       expect(signature.signature).toBeDefined();
       expect(signature.signature).toMatch(/^[a-f0-9]{64}$/);
-      expect(signature.algorithm).toBe('sha256');
+      expect(signature.algorithm).toBe("sha256");
       expect(signature.timestamp).toBeGreaterThan(0);
     });
 
-    it('should generate consistent signatures for same payload', () => {
-      const secret = 'test-secret';
+    it("should generate consistent signatures for same payload", () => {
+      const secret = "test-secret";
       const timestamp = Date.now();
 
-      const sig1 = signatureService.generateSignature(testPayload, secret, timestamp);
-      const sig2 = signatureService.generateSignature(testPayload, secret, timestamp);
+      const sig1 = signatureService.generateSignature(
+        testPayload,
+        secret,
+        timestamp,
+      );
+      const sig2 = signatureService.generateSignature(
+        testPayload,
+        secret,
+        timestamp,
+      );
 
       expect(sig1.signature).toBe(sig2.signature);
     });
 
-    it('should generate different signatures for different payloads', () => {
-      const secret = 'test-secret';
-      const payload2 = { ...testPayload, data: { different: 'data' } };
+    it("should generate different signatures for different payloads", () => {
+      const secret = "test-secret";
+      const payload2 = { ...testPayload, data: { different: "data" } };
 
       const sig1 = signatureService.generateSignature(testPayload, secret);
       const sig2 = signatureService.generateSignature(payload2, secret);
@@ -66,18 +75,22 @@ describe('Webhook Signature Service', () => {
       expect(sig1.signature).not.toBe(sig2.signature);
     });
 
-    it('should throw error for empty secret', () => {
+    it("should throw error for empty secret", () => {
       expect(() => {
-        signatureService.generateSignature(testPayload, '');
+        signatureService.generateSignature(testPayload, "");
       }).toThrow(WebhookError);
     });
   });
 
-  describe('verifySignature', () => {
-    it('should verify valid signature', () => {
-      const secret = 'test-secret';
+  describe("verifySignature", () => {
+    it("should verify valid signature", () => {
+      const secret = "test-secret";
       const timestamp = Date.now();
-      const sig = signatureService.generateSignature(testPayload, secret, timestamp);
+      const sig = signatureService.generateSignature(
+        testPayload,
+        secret,
+        timestamp,
+      );
 
       const valid = signatureService.verifySignature(
         testPayload,
@@ -89,13 +102,13 @@ describe('Webhook Signature Service', () => {
       expect(valid).toBe(true);
     });
 
-    it('should reject invalid signature', () => {
-      const secret = 'test-secret';
+    it("should reject invalid signature", () => {
+      const secret = "test-secret";
       const timestamp = Date.now();
 
       const valid = signatureService.verifySignature(
         testPayload,
-        'invalid-signature',
+        "invalid-signature",
         secret,
         timestamp,
       );
@@ -103,10 +116,14 @@ describe('Webhook Signature Service', () => {
       expect(valid).toBe(false);
     });
 
-    it('should reject expired signatures', () => {
-      const secret = 'test-secret';
+    it("should reject expired signatures", () => {
+      const secret = "test-secret";
       const oldTimestamp = Date.now() - 400000; // 6+ minutes ago
-      const sig = signatureService.generateSignature(testPayload, secret, oldTimestamp);
+      const sig = signatureService.generateSignature(
+        testPayload,
+        secret,
+        oldTimestamp,
+      );
 
       expect(() => {
         signatureService.verifySignature(
@@ -116,13 +133,17 @@ describe('Webhook Signature Service', () => {
           oldTimestamp,
           300000, // 5 minute tolerance
         );
-      }).toThrow('outside tolerance window');
+      }).toThrow("outside tolerance window");
     });
 
-    it('should accept signatures within tolerance window', () => {
-      const secret = 'test-secret';
+    it("should accept signatures within tolerance window", () => {
+      const secret = "test-secret";
       const recentTimestamp = Date.now() - 60000; // 1 minute ago
-      const sig = signatureService.generateSignature(testPayload, secret, recentTimestamp);
+      const sig = signatureService.generateSignature(
+        testPayload,
+        secret,
+        recentTimestamp,
+      );
 
       const valid = signatureService.verifySignature(
         testPayload,
@@ -136,47 +157,80 @@ describe('Webhook Signature Service', () => {
     });
   });
 
-  describe('createSignatureHeaders', () => {
-    it('should create proper signature headers', () => {
-      const secret = 'test-secret';
-      const headers = signatureService.createSignatureHeaders(testPayload, secret);
+  describe("createSignatureHeaders", () => {
+    it("should create proper signature headers", () => {
+      const secret = "test-secret";
+      const headers = signatureService.createSignatureHeaders(
+        testPayload,
+        secret,
+      );
 
-      expect(headers).toHaveProperty('X-Webhook-Signature');
-      expect(headers).toHaveProperty('X-Webhook-Timestamp');
-      expect(headers).toHaveProperty('X-Webhook-Algorithm');
-      expect(headers).toHaveProperty('X-Webhook-Event-Type');
-      expect(headers).toHaveProperty('X-Webhook-Event-Id');
-      expect(headers['X-Webhook-Algorithm']).toBe('sha256');
-      expect(headers['X-Webhook-Event-Type']).toBe(testPayload.eventType);
+      expect(headers).toHaveProperty("X-Webhook-Signature");
+      expect(headers).toHaveProperty("X-Webhook-Timestamp");
+      expect(headers).toHaveProperty("X-Webhook-Algorithm");
+      expect(headers).toHaveProperty("X-Webhook-Event-Type");
+      expect(headers).toHaveProperty("X-Webhook-Event-Id");
+      expect(headers["X-Webhook-Algorithm"]).toBe("sha256");
+      expect(headers["X-Webhook-Event-Type"]).toBe(testPayload.eventType);
     });
   });
 
-  describe('parseSignatureHeaders', () => {
-    it('should parse valid signature headers', () => {
+  describe("parseSignatureHeaders", () => {
+    it("should parse valid signature headers", () => {
       const headers = {
-        'X-Webhook-Signature': 'abc123',
-        'X-Webhook-Timestamp': '1234567890',
-        'X-Webhook-Algorithm': 'sha256',
+        "X-Webhook-Signature": "a".repeat(64),
+        "X-Webhook-Timestamp": "1234567890",
+        "X-Webhook-Algorithm": "sha256",
       };
 
       const parsed = signatureService.parseSignatureHeaders(headers);
 
-      expect(parsed.signature).toBe('abc123');
+      expect(parsed.signature).toBe("a".repeat(64));
       expect(parsed.timestamp).toBe(1234567890);
-      expect(parsed.algorithm).toBe('sha256');
+      expect(parsed.algorithm).toBe("sha256");
     });
 
-    it('should throw error for missing headers', () => {
-      const headers = { 'X-Webhook-Signature': 'abc123' };
+    it("should throw error for missing headers", () => {
+      const headers = { "X-Webhook-Signature": "a".repeat(64) };
 
       expect(() => {
         signatureService.parseSignatureHeaders(headers);
-      }).toThrow('Missing required signature headers');
+      }).toThrow("Missing required signature headers");
+    });
+
+    it("should reject a mismatched signature algorithm", () => {
+      expect(() =>
+        signatureService.parseSignatureHeaders({
+          "X-Webhook-Signature": "a".repeat(64),
+          "X-Webhook-Timestamp": "1234567890",
+          "X-Webhook-Algorithm": "sha1",
+        }),
+      ).toThrow("Unsupported signature algorithm");
+    });
+
+    it("should reject partially numeric timestamps", () => {
+      expect(() =>
+        signatureService.parseSignatureHeaders({
+          "X-Webhook-Signature": "a".repeat(64),
+          "X-Webhook-Timestamp": "1234567890junk",
+          "X-Webhook-Algorithm": "sha256",
+        }),
+      ).toThrow("Invalid timestamp");
+    });
+
+    it("should reject malformed hex signatures", () => {
+      expect(() =>
+        signatureService.parseSignatureHeaders({
+          "X-Webhook-Signature": "z".repeat(64),
+          "X-Webhook-Timestamp": "1234567890",
+          "X-Webhook-Algorithm": "sha256",
+        }),
+      ).toThrow("Invalid webhook signature encoding");
     });
   });
 
-  describe('generateSecret', () => {
-    it('should generate secure random secret', () => {
+  describe("generateSecret", () => {
+    it("should generate secure random secret", () => {
       const secret = WebhookSignatureService.generateSecret();
 
       expect(secret).toBeDefined();
@@ -184,7 +238,7 @@ describe('Webhook Signature Service', () => {
       expect(secret).toMatch(/^[a-f0-9]{64}$/);
     });
 
-    it('should generate unique secrets', () => {
+    it("should generate unique secrets", () => {
       const secret1 = WebhookSignatureService.generateSecret();
       const secret2 = WebhookSignatureService.generateSecret();
 
@@ -193,15 +247,15 @@ describe('Webhook Signature Service', () => {
   });
 });
 
-describe('Webhook Retry Service', () => {
+describe("Webhook Retry Service", () => {
   let retryService: WebhookRetryService;
 
   beforeEach(() => {
     retryService = new WebhookRetryService();
   });
 
-  describe('calculateRetryDelay', () => {
-    it('should calculate exponential backoff', () => {
+  describe("calculateRetryDelay", () => {
+    it("should calculate exponential backoff", () => {
       const config = DEFAULT_RETRY_CONFIG;
 
       const delay0 = retryService.calculateRetryDelay(0, config);
@@ -212,7 +266,7 @@ describe('Webhook Retry Service', () => {
       expect(delay2).toBeGreaterThan(delay1);
     });
 
-    it('should respect maximum delay', () => {
+    it("should respect maximum delay", () => {
       const config = { ...DEFAULT_RETRY_CONFIG, maxDelayMs: 10000 };
 
       const delay10 = retryService.calculateRetryDelay(10, config);
@@ -220,7 +274,7 @@ describe('Webhook Retry Service', () => {
       expect(delay10).toBeLessThanOrEqual(config.maxDelayMs * 1.2); // Allow for jitter
     });
 
-    it('should include jitter', () => {
+    it("should include jitter", () => {
       const config = { ...DEFAULT_RETRY_CONFIG, jitterFactor: 0.1 };
 
       const delays = Array.from({ length: 10 }, () =>
@@ -233,8 +287,8 @@ describe('Webhook Retry Service', () => {
     });
   });
 
-  describe('shouldRetry', () => {
-    it('should not retry after max attempts', () => {
+  describe("shouldRetry", () => {
+    it("should not retry after max attempts", () => {
       const config = { ...DEFAULT_RETRY_CONFIG, maxAttempts: 3 };
       const attempts = [
         { attemptNumber: 0, timestamp: Date.now(), statusCode: 500 },
@@ -247,36 +301,44 @@ describe('Webhook Retry Service', () => {
       expect(shouldRetry).toBe(false);
     });
 
-    it('should retry on 5xx errors', () => {
+    it("should retry on 5xx errors", () => {
       const config = DEFAULT_RETRY_CONFIG;
-      const attempts = [{ attemptNumber: 0, timestamp: Date.now(), statusCode: 500 }];
+      const attempts = [
+        { attemptNumber: 0, timestamp: Date.now(), statusCode: 500 },
+      ];
 
       const shouldRetry = retryService.shouldRetry(attempts, config, 500);
 
       expect(shouldRetry).toBe(true);
     });
 
-    it('should not retry on 4xx errors (except 408, 429)', () => {
+    it("should not retry on 4xx errors (except 408, 429)", () => {
       const config = DEFAULT_RETRY_CONFIG;
-      const attempts = [{ attemptNumber: 0, timestamp: Date.now(), statusCode: 404 }];
+      const attempts = [
+        { attemptNumber: 0, timestamp: Date.now(), statusCode: 404 },
+      ];
 
       const shouldRetry = retryService.shouldRetry(attempts, config, 404);
 
       expect(shouldRetry).toBe(false);
     });
 
-    it('should retry on 429 rate limit', () => {
+    it("should retry on 429 rate limit", () => {
       const config = DEFAULT_RETRY_CONFIG;
-      const attempts = [{ attemptNumber: 0, timestamp: Date.now(), statusCode: 429 }];
+      const attempts = [
+        { attemptNumber: 0, timestamp: Date.now(), statusCode: 429 },
+      ];
 
       const shouldRetry = retryService.shouldRetry(attempts, config, 429);
 
       expect(shouldRetry).toBe(true);
     });
 
-    it('should not retry on 2xx success', () => {
+    it("should not retry on 2xx success", () => {
       const config = DEFAULT_RETRY_CONFIG;
-      const attempts = [{ attemptNumber: 0, timestamp: Date.now(), statusCode: 200 }];
+      const attempts = [
+        { attemptNumber: 0, timestamp: Date.now(), statusCode: 200 },
+      ];
 
       const shouldRetry = retryService.shouldRetry(attempts, config, 200);
 
@@ -284,8 +346,8 @@ describe('Webhook Retry Service', () => {
     });
   });
 
-  describe('getRetryStrategy', () => {
-    it('should provide retry strategy information', () => {
+  describe("getRetryStrategy", () => {
+    it("should provide retry strategy information", () => {
       const config = { ...DEFAULT_RETRY_CONFIG, maxAttempts: 5 };
       const attempts = [
         { attemptNumber: 0, timestamp: Date.now() - 2000, statusCode: 500 },
@@ -302,32 +364,32 @@ describe('Webhook Retry Service', () => {
     });
   });
 
-  describe('validateRetryConfig', () => {
-    it('should accept valid configuration', () => {
+  describe("validateRetryConfig", () => {
+    it("should accept valid configuration", () => {
       expect(() => {
         retryService.validateRetryConfig(DEFAULT_RETRY_CONFIG);
       }).not.toThrow();
     });
 
-    it('should reject invalid maxAttempts', () => {
+    it("should reject invalid maxAttempts", () => {
       const config = { ...DEFAULT_RETRY_CONFIG, maxAttempts: 0 };
 
       expect(() => {
         retryService.validateRetryConfig(config);
-      }).toThrow('maxAttempts must be at least 1');
+      }).toThrow("maxAttempts must be at least 1");
     });
 
-    it('should reject invalid backoff multiplier', () => {
+    it("should reject invalid backoff multiplier", () => {
       const config = { ...DEFAULT_RETRY_CONFIG, backoffMultiplier: 0.5 };
 
       expect(() => {
         retryService.validateRetryConfig(config);
-      }).toThrow('backoffMultiplier must be at least 1');
+      }).toThrow("backoffMultiplier must be at least 1");
     });
   });
 });
 
-describe('Webhook Queue', () => {
+describe("Webhook Queue", () => {
   let queue: WebhookQueue;
   let testTarget: WebhookTarget;
   let testDelivery: any;
@@ -335,10 +397,10 @@ describe('Webhook Queue', () => {
   beforeEach(() => {
     queue = new WebhookQueue();
     testTarget = {
-      id: 'target-1',
-      name: 'Test Target',
-      url: 'https://example.com/webhook',
-      secret: 'test-secret',
+      id: "target-1",
+      name: "Test Target",
+      url: "https://example.com/webhook",
+      secret: "test-secret",
       enabled: true,
       eventFilters: [],
       timeout: 30000,
@@ -350,26 +412,26 @@ describe('Webhook Queue', () => {
       },
     };
     testDelivery = {
-      id: 'delivery-1',
+      id: "delivery-1",
       targetId: testTarget.id,
       payload: {
-        id: 'event-1',
+        id: "event-1",
         eventType: WebhookEventType.OPTIMIZATION_COMPLETED,
         timestamp: Date.now(),
-        source: 'test',
+        source: "test",
         data: {},
-        version: '1.0',
+        version: "1.0",
       },
       status: WebhookDeliveryStatus.PENDING,
       attempts: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      signature: 'test-sig',
+      signature: "test-sig",
     };
   });
 
-  describe('enqueue/dequeue', () => {
-    it('should enqueue and dequeue items', () => {
+  describe("enqueue/dequeue", () => {
+    it("should enqueue and dequeue items", () => {
       queue.enqueue(testDelivery, testTarget);
 
       expect(queue.size()).toBe(1);
@@ -381,9 +443,9 @@ describe('Webhook Queue', () => {
       expect(queue.size()).toBe(0);
     });
 
-    it('should respect priority ordering', () => {
-      const delivery2 = { ...testDelivery, id: 'delivery-2' };
-      const delivery3 = { ...testDelivery, id: 'delivery-3' };
+    it("should respect priority ordering", () => {
+      const delivery2 = { ...testDelivery, id: "delivery-2" };
+      const delivery3 = { ...testDelivery, id: "delivery-3" };
 
       queue.enqueue(testDelivery, testTarget, 1);
       queue.enqueue(delivery2, testTarget, 3); // Highest priority
@@ -393,12 +455,12 @@ describe('Webhook Queue', () => {
       const item2 = queue.dequeue();
       const item3 = queue.dequeue();
 
-      expect(item1?.delivery.id).toBe('delivery-2'); // Priority 3
-      expect(item2?.delivery.id).toBe('delivery-3'); // Priority 2
-      expect(item3?.delivery.id).toBe('delivery-1'); // Priority 1
+      expect(item1?.delivery.id).toBe("delivery-2"); // Priority 3
+      expect(item2?.delivery.id).toBe("delivery-3"); // Priority 2
+      expect(item3?.delivery.id).toBe("delivery-1"); // Priority 1
     });
 
-    it('should not dequeue items scheduled for future', () => {
+    it("should not dequeue items scheduled for future", () => {
       const futureDelivery = {
         ...testDelivery,
         nextRetryAt: Date.now() + 10000,
@@ -412,7 +474,7 @@ describe('Webhook Queue', () => {
       expect(queue.size()).toBe(1);
     });
 
-    it('should skip disabled targets', () => {
+    it("should skip disabled targets", () => {
       const disabledTarget = { ...testTarget, enabled: false };
 
       queue.enqueue(testDelivery, disabledTarget);
@@ -424,8 +486,8 @@ describe('Webhook Queue', () => {
     });
   });
 
-  describe('rate limiting', () => {
-    it('should enforce rate limits when enabled', () => {
+  describe("rate limiting", () => {
+    it("should enforce rate limits when enabled", () => {
       const rateLimitedTarget = {
         ...testTarget,
         rateLimitConfig: {
@@ -436,9 +498,9 @@ describe('Webhook Queue', () => {
       };
 
       // Enqueue 3 items
-      queue.enqueue({ ...testDelivery, id: 'delivery-1' }, rateLimitedTarget);
-      queue.enqueue({ ...testDelivery, id: 'delivery-2' }, rateLimitedTarget);
-      queue.enqueue({ ...testDelivery, id: 'delivery-3' }, rateLimitedTarget);
+      queue.enqueue({ ...testDelivery, id: "delivery-1" }, rateLimitedTarget);
+      queue.enqueue({ ...testDelivery, id: "delivery-2" }, rateLimitedTarget);
+      queue.enqueue({ ...testDelivery, id: "delivery-3" }, rateLimitedTarget);
 
       // Should get first 2 (burst size)
       const item1 = queue.dequeue();
@@ -451,8 +513,8 @@ describe('Webhook Queue', () => {
     });
   });
 
-  describe('dead letter queue', () => {
-    it('should move items to dead letter queue', () => {
+  describe("dead letter queue", () => {
+    it("should move items to dead letter queue", () => {
       const item = {
         delivery: testDelivery,
         target: testTarget,
@@ -466,7 +528,7 @@ describe('Webhook Queue', () => {
       expect(item.delivery.status).toBe(WebhookDeliveryStatus.DEAD_LETTER);
     });
 
-    it('should retry dead letter items', () => {
+    it("should retry dead letter items", () => {
       const item = {
         delivery: testDelivery,
         target: testTarget,
@@ -483,10 +545,10 @@ describe('Webhook Queue', () => {
     });
   });
 
-  describe('statistics', () => {
-    it('should provide queue statistics', () => {
+  describe("statistics", () => {
+    it("should provide queue statistics", () => {
       queue.enqueue(testDelivery, testTarget, 1);
-      queue.enqueue({ ...testDelivery, id: 'delivery-2' }, testTarget, 2);
+      queue.enqueue({ ...testDelivery, id: "delivery-2" }, testTarget, 2);
 
       const stats = queue.getStatistics();
 
@@ -499,17 +561,20 @@ describe('Webhook Queue', () => {
   });
 });
 
-describe('Webhook Client Integration', () => {
+describe("Webhook Client Integration", () => {
   let client: WebhookClient;
   let testTarget: WebhookTarget;
 
   beforeEach(() => {
-    client = new WebhookClient();
+    client = new WebhookClient({
+      ...DEFAULT_CLIENT_CONFIG,
+      queueCheckInterval: 10,
+    });
     testTarget = {
-      id: 'target-1',
-      name: 'Test Target',
-      url: 'https://api.example.com/webhook',
-      secret: 'test-secret-key',
+      id: "target-1",
+      name: "Test Target",
+      url: "https://api.example.com/webhook",
+      secret: "test-secret-key",
       enabled: true,
       eventFilters: [WebhookEventType.OPTIMIZATION_COMPLETED],
       timeout: 5000,
@@ -530,15 +595,15 @@ describe('Webhook Client Integration', () => {
     nock.cleanAll();
   });
 
-  describe('send', () => {
-    it('should successfully send webhook', async () => {
-      nock('https://api.example.com')
-        .post('/webhook')
+  describe("send", () => {
+    it("should successfully send webhook", async () => {
+      nock("https://api.example.com")
+        .post("/webhook")
         .reply(200, { success: true });
 
       const deliveryIds = await client.send(
         WebhookEventType.OPTIMIZATION_COMPLETED,
-        { test: 'data' },
+        { test: "data" },
       );
 
       expect(deliveryIds).toHaveLength(1);
@@ -548,13 +613,48 @@ describe('Webhook Client Integration', () => {
       client.start();
 
       // Wait for delivery
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const delivery = client.getDelivery(deliveryIds[0]);
       expect(delivery?.status).toBe(WebhookDeliveryStatus.DELIVERED);
     });
 
-    it('should filter events by target configuration', async () => {
+    it("should not allow custom headers to override signature metadata", async () => {
+      client.unregisterTarget(testTarget.id);
+      client.registerTarget({
+        ...testTarget,
+        headers: {
+          "X-Webhook-Signature": "attacker-controlled",
+          "X-Webhook-Algorithm": "sha1",
+          "X-Webhook-Timestamp": "0",
+        },
+      });
+
+      nock("https://api.example.com", {
+        reqheaders: {
+          "x-webhook-signature": (value) =>
+            /^[a-f0-9]{64}$/.test(String(value)),
+          "x-webhook-algorithm": "sha256",
+          "x-webhook-timestamp": (value) => Number(value) > 0,
+        },
+      })
+        .post("/webhook")
+        .reply(200, { success: true });
+
+      const deliveryIds = await client.send(
+        WebhookEventType.OPTIMIZATION_COMPLETED,
+        { test: "data" },
+      );
+      client.start();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      expect(nock.isDone()).toBe(true);
+      expect(client.getDelivery(deliveryIds[0])?.status).toBe(
+        WebhookDeliveryStatus.DELIVERED,
+      );
+    });
+
+    it("should filter events by target configuration", async () => {
       const deliveryIds = await client.send(
         WebhookEventType.COST_ALERT, // Not in eventFilters
         { cost: 100 },
@@ -563,67 +663,69 @@ describe('Webhook Client Integration', () => {
       expect(deliveryIds).toHaveLength(0);
     });
 
-    it('should skip disabled targets', async () => {
+    it("should skip disabled targets", async () => {
       testTarget.enabled = false;
       client.registerTarget(testTarget);
 
       const deliveryIds = await client.send(
         WebhookEventType.OPTIMIZATION_COMPLETED,
-        { test: 'data' },
+        { test: "data" },
       );
 
       expect(deliveryIds).toHaveLength(0);
     });
   });
 
-  describe('retry logic', () => {
-    it('should retry on server errors', async () => {
-      nock('https://api.example.com')
-        .post('/webhook')
+  describe("retry logic", () => {
+    it("should retry on server errors", async () => {
+      nock("https://api.example.com")
+        .post("/webhook")
         .times(2)
-        .reply(500, 'Server Error');
+        .reply(500, "Server Error");
 
       const deliveryIds = await client.send(
         WebhookEventType.OPTIMIZATION_COMPLETED,
-        { test: 'data' },
+        { test: "data" },
       );
 
       client.start();
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       const delivery = client.getDelivery(deliveryIds[0]);
       expect(delivery?.attempts.length).toBeGreaterThan(1);
     });
 
-    it('should move to dead letter after max retries', async () => {
-      nock('https://api.example.com')
-        .post('/webhook')
+    it("should move to dead letter after max retries", async () => {
+      nock("https://api.example.com")
+        .post("/webhook")
         .times(3)
-        .reply(500, 'Server Error');
+        .reply(500, "Server Error");
 
       const deliveryIds = await client.send(
         WebhookEventType.OPTIMIZATION_COMPLETED,
-        { test: 'data' },
+        { test: "data" },
       );
 
       client.start();
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       const delivery = client.getDelivery(deliveryIds[0]);
       expect(delivery?.status).toBe(WebhookDeliveryStatus.DEAD_LETTER);
     });
   });
 
-  describe('statistics', () => {
-    it('should track delivery statistics', async () => {
-      nock('https://api.example.com')
-        .post('/webhook')
+  describe("statistics", () => {
+    it("should track delivery statistics", async () => {
+      nock("https://api.example.com")
+        .post("/webhook")
         .reply(200, { success: true });
 
-      await client.send(WebhookEventType.OPTIMIZATION_COMPLETED, { test: 'data' });
+      await client.send(WebhookEventType.OPTIMIZATION_COMPLETED, {
+        test: "data",
+      });
 
       client.start();
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const stats = client.getStatistics();
 

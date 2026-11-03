@@ -1,0 +1,92 @@
+name: Node Quality
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  slack-signature:
+    name: Slack signed-request boundary
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20.19.5
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Strictly check actual signature processor
+        run: node node_modules/typescript/bin/tsc --noEmit --strict --esModuleInterop --target ES2022 --lib ES2022 --types node --module commonjs --skipLibCheck src/integrations/slack/slack-webhooks.ts
+      - name: Probe runtime and native HTTP rejection paths
+        run: node scripts/probe-slack-signature.cjs .
+      - name: Signed fixtures and malformed-boundary regressions
+        run: npm test -- --runInBand tests/slack-signature-boundary.test.ts src/integrations/slack/tests/slack.test.ts
+
+  slack-oauth:
+    name: Slack OAuth HTTP and response contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20.19.5
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Strictly check the actual OAuth source
+        run: node node_modules/typescript/bin/tsc --noEmit --strict --esModuleInterop --target ES2022 --module commonjs --skipLibCheck src/integrations/slack/slack-auth.ts
+      - name: Probe real native loopback HTTP responses and body deadlines
+        run: node scripts/probe-slack-oauth.cjs .
+      - run: npm audit --omit=dev
+
+  node:
+    name: Node 20 validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20.19.5
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Run webhook contract tests
+        run: npm test -- --runInBand src/integrations/webhooks/tests/webhook.test.ts
+
+      - name: Run complete Jest suite
+        run: npm test -- --runInBand
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+
+  github-http:
+    name: GitHub HTTP deadline contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20.19.5
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Type-check the actual GitHub client
+        run: node node_modules/typescript/bin/tsc --noEmit --strict --esModuleInterop --target ES2022 --module commonjs --skipLibCheck src/integrations/github/github-client.ts
+      - name: Exercise real loopback HTTP and GitHub/auth regression tests
+        run: npm test -- --runInBand tests/github-http-deadline.test.ts tests/github-auth-response.test.ts src/integrations/github/tests/github.test.ts
+      - run: npm audit --omit=dev

@@ -163,7 +163,13 @@ export class SlackWebhookProcessor {
     const { signature, timestamp, body } = request;
 
     // Check timestamp to prevent replay attacks
-    const requestTime = parseInt(timestamp, 10);
+    if (typeof timestamp !== 'string' || !/^\d+$/.test(timestamp)) {
+      return { valid: false, error: 'Invalid request timestamp' };
+    }
+    const requestTime = Number(timestamp);
+    if (!Number.isSafeInteger(requestTime) || requestTime < 0) {
+      return { valid: false, error: 'Invalid request timestamp' };
+    }
     const currentTime = Math.floor(Date.now() / 1000);
 
     if (Math.abs(currentTime - requestTime) > this.config.maxRequestAge) {
@@ -171,6 +177,12 @@ export class SlackWebhookProcessor {
         valid: false,
         error: 'Request timestamp is too old',
       };
+    }
+
+    // Slack v0 signatures have a fixed ASCII shape. Validate before the
+    // constant-time comparison, which throws on unequal byte lengths.
+    if (typeof signature !== 'string' || !/^v0=[0-9a-f]{64}$/.test(signature)) {
+      return { valid: false, error: 'Invalid signature' };
     }
 
     // Compute expected signature

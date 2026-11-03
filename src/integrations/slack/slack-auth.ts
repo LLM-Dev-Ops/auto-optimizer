@@ -14,6 +14,20 @@ import type {
   SlackError,
 } from './slack-types';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function invalidResponse(): SlackError {
+  const error = new Error('Invalid Slack OAuth response') as SlackError;
+  error.code = 'INVALID_RESPONSE';
+  return error;
+}
+
 /**
  * In-memory token storage (default implementation)
  */
@@ -138,6 +152,31 @@ export class SlackOAuthHandler {
   private readonly baseUrl = 'https://slack.com/api';
   private rotationIntervals: Map<string, NodeJS.Timeout> = new Map();
 
+  /** Validate the transport and JSON envelope before trusting provider fields. */
+  private async readResponse(
+    response: Response,
+    fallback: string
+  ): Promise<Record<string, unknown> & { ok: true }> {
+    if (!response.ok) {
+      void response.body?.cancel().catch(() => {});
+      const error = new Error('Slack OAuth HTTP request failed') as SlackError;
+      error.code = 'HTTP_ERROR';
+      error.statusCode = response.status;
+      throw error;
+    }
+    const result: unknown = await response.json();
+    if (!isRecord(result) || typeof result.ok !== 'boolean') {
+      throw invalidResponse();
+    }
+    if (!result.ok) {
+      const code = isNonEmptyString(result.error) ? result.error : undefined;
+      const error = new Error(code || fallback) as SlackError;
+      error.code = code;
+      throw error;
+    }
+    return result as Record<string, unknown> & { ok: true };
+  }
+
   /**
    * Creates a new OAuth handler
    * @param config - Slack configuration
@@ -232,21 +271,24 @@ export class SlackOAuthHandler {
         signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
-
-      const result = await response.json() as OAuthAccessResponse;
-
-      if (!result.ok) {
-        const error = new Error(result.error || 'OAuth exchange failed') as SlackError;
-        error.code = result.error;
-        error.data = result;
-        throw error;
+      const result = await this.readResponse(response, 'OAuth exchange failed');
+      if (!isNonEmptyString(result.access_token) ||
+          !isRecord(result.team) || !isNonEmptyString(result.team.id)) {
+        throw invalidResponse();
+      }
+      // Validate every optional user field before either token is persisted.
+      if (result.authed_user !== undefined &&
+          (!isRecord(result.authed_user) ||
+           !isNonEmptyString(result.authed_user.id) ||
+           (result.authed_user.access_token !== undefined &&
+            !isNonEmptyString(result.authed_user.access_token)))) {
+        throw invalidResponse();
       }
 
       // Store tokens
       await this.storage.store(result.team.id, result.access_token);
 
-      if (result.authed_user?.access_token) {
+      if (isRecord(result.authed_user) && isNonEmptyString(result.authed_user.access_token)) {
         await this.storage.store(
           `${result.team.id}:user:${result.authed_user.id}`,
           result.authed_user.access_token
@@ -258,10 +300,9 @@ export class SlackOAuthHandler {
         this.startTokenRotation(result.team.id);
       }
 
-      return result;
-    } catch (error) {
+      return result as unknown as OAuthAccessResponse;
+    } finally {
       clearTimeout(timeoutId);
-      throw error;
     }
   }
 
@@ -295,24 +336,21 @@ export class SlackOAuthHandler {
         signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
-
-      const result = await response.json() as OAuthTokenRefreshResponse;
-
-      if (!result.ok) {
-        const error = new Error(result.error || 'Token refresh failed') as SlackError;
-        error.code = result.error;
-        throw error;
+      const result = await this.readResponse(response, 'Token refresh failed');
+      if (!isNonEmptyString(result.access_token) ||
+          typeof result.expires_in !== 'number' ||
+          !Number.isFinite(result.expires_in) || result.expires_in <= 0) {
+        throw invalidResponse();
       }
 
       // Store new token
       const expiresAt = new Date(Date.now() + result.expires_in * 1000);
+      if (!Number.isFinite(expiresAt.getTime())) throw invalidResponse();
       await this.storage.store(teamId, result.access_token, expiresAt);
 
-      return result;
-    } catch (error) {
+      return result as unknown as OAuthTokenRefreshResponse;
+    } finally {
       clearTimeout(timeoutId);
-      throw error;
     }
   }
 
@@ -335,18 +373,9 @@ export class SlackOAuthHandler {
         signal: controller.signal,
       });
 
+      await this.readResponse(response, 'Token revocation failed');
+    } finally {
       clearTimeout(timeoutId);
-
-      const result = await response.json();
-
-      if (!result.ok) {
-        const error = new Error(result.error || 'Token revocation failed') as SlackError;
-        error.code = result.error;
-        throw error;
-      }
-    } catch (error) {
-      clearTimeout(timeoutId);
-      throw error;
     }
   }
 
@@ -436,13 +465,12 @@ export class SlackOAuthHandler {
         signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
-
-      const result = await response.json();
-      return result.ok === true;
+      await this.readResponse(response, 'Token validation failed');
+      return true;
     } catch (error) {
-      clearTimeout(timeoutId);
       return false;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
