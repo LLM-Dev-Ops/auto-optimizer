@@ -1,0 +1,235 @@
+{
+  "replay": {
+    "pass": true,
+    "checks": {
+      "receipts": true,
+      "reachesRoot": true,
+      "contiguousParents": true,
+      "allPromoted": true,
+      "gateUnchanged": true,
+      "gateReExecutes": true,
+      "allCommitsReceipts": true,
+      "sealedFieldsAuthentic": true
+    },
+    "failures": [],
+    "chainSummary": "gen0(root)"
+  },
+  "replayBundle": {
+    "data_source": "LIVE_ACTUAL_SOURCE_NATIVE_HTTP_SYNTHETIC_FIXTURES",
+    "root_id": "root",
+    "chain": [
+      {
+        "id": "root",
+        "generation": 0,
+        "parents": [],
+        "mutation": null,
+        "primaryDelta": 0,
+        "anchorScore": 1,
+        "verdict": "ROOT",
+        "failureReasons": [],
+        "receipt": {
+          "payload": {
+            "kind": "root",
+            "root": "root"
+          },
+          "signature": "auYbJtFJtGMAdPt6jpb11fBJIuN1Sd846KM96odKvSYNQIcwuuy5+ty8Z6SZbh59UlZE84MhdbtYeXaeP6zcCQ==",
+          "publicKey": "MCowBQYDK2VwAyEAPfHf1wxFxNGfSAqHRM0J8Pa5HH8Tyq6R8O93eSdNrt4=",
+          "alg": "ed25519"
+        },
+        "createdAt": "gen-0"
+      }
+    ],
+    "all_commits": [
+      {
+        "id": "root__revision_gen1",
+        "generation": 1,
+        "parents": [
+          "root"
+        ],
+        "mutation": {
+          "target": "revision",
+          "summary": "Strict timestamp and fixed signature shape before timing-safe verification; positive fixtures signed rather than bypassed",
+          "inverse": {
+            "path": "src/integrations/slack/slack-webhooks.ts",
+            "parentBytes": "/**\n * Slack Webhook Event Processor\n *\n * Handles webhook events, signature verification, and event processing\n * @module slack-webhooks\n */\n\nimport * as crypto from 'crypto';\nimport type {\n  SlackConfig,\n  EventPayload,\n  UrlVerificationPayload,\n  WebhookRequest,\n  WebhookVerificationResult,\n  SlackEvent,\n  MessageEvent,\n  AppMentionEvent,\n  InteractivePayload,\n  BlockActionsPayload,\n  ViewSubmissionPayload,\n  SlackError,\n} from './slack-types';\n\n/**\n * Event handler function type\n */\nexport type EventHandler<T = SlackEvent> = (event: T, context: EventContext) => Promise<void> | void;\n\n/**\n * Interactive handler function type\n */\nexport type InteractiveHandler<T = InteractivePayload> = (\n  payload: T,\n  context: InteractiveContext\n) => Promise<void | Record<string, unknown>> | void | Record<string, unknown>;\n\n/**\n * Event context\n */\nexport interface EventContext {\n  teamId: string;\n  apiAppId: string;\n  eventId: string;\n  eventTime: number;\n  authorizations?: Array<{\n    enterprise_id: string | null;\n    team_id: string;\n    user_id: string;\n    is_bot: boolean;\n  }>;\n}\n\n/**\n * Interactive context\n */\nexport interface InteractiveContext {\n  triggerId?: string;\n  responseUrl?: string;\n  user: {\n    id: string;\n    username?: string;\n    team_id?: string;\n  };\n  team: {\n    id: string;\n    domain: string;\n  };\n}\n\n/**\n * Webhook processor configuration\n */\nexport interface WebhookProcessorConfig {\n  signingSecret: string;\n  enableSignatureVerification?: boolean;\n  maxRequestAge?: number; // seconds\n  enableEventDeduplication?: boolean;\n  deduplicationWindow?: number; // seconds\n}\n\n/**\n * Event deduplication manager\n */\nclass EventDeduplicator {\n  private processedEvents: Map<string, number> = new Map();\n  private readonly window: number;\n\n  constructor(windowSeconds: number = 300) {\n    this.window = windowSeconds * 1000;\n  }\n\n  /**\n   * Checks if event has been processed\n   * @param eventId - Event ID\n   */\n  isDuplicate(eventId: string): boolean {\n    const timestamp = this.processedEvents.get(eventId);\n    if (!timestamp) return false;\n\n    // Check if still within deduplication window\n    return Date.now() - timestamp < this.window;\n  }\n\n  /**\n   * Marks event as processed\n   * @param eventId - Event ID\n   */\n  markProcessed(eventId: string): void {\n    this.processedEvents.set(eventId, Date.now());\n    this.cleanup();\n  }\n\n  /**\n   * Cleans up old processed events\n   */\n  private cleanup(): void {\n    const now = Date.now();\n    for (const [eventId, timestamp] of this.processedEvents.entries()) {\n      if (now - timestamp > this.window) {\n        this.processedEvents.delete(eventId);\n      }\n    }\n  }\n\n  /**\n   * Clears all processed events (for testing)\n   */\n  clear(): void {\n    this.processedEvents.clear();\n  }\n}\n\n/**\n * Slack Webhook Processor\n */\nexport class SlackWebhookProcessor {\n  private readonly config: Required<WebhookProcessorConfig>;\n  private readonly eventHandlers: Map<string, EventHandler[]> = new Map();\n  private readonly interactiveHandlers: Map<string, InteractiveHandler[]> = new Map();\n  private readonly deduplicator: EventDeduplicator;\n\n  constructor(config: WebhookProcessorConfig) {\n    this.config = {\n      signingSecret: config.signingSecret,\n      enableSignatureVerification: config.enableSignatureVerification !== false,\n      maxRequestAge: config.maxRequestAge || 300, // 5 minutes\n      enableEventDeduplication: config.enableEventDeduplication !== false,\n      deduplicationWindow: config.deduplicationWindow || 300, // 5 minutes\n    };\n\n    this.deduplicator = new EventDeduplicator(this.config.deduplicationWindow);\n  }\n\n  /**\n   * Verifies webhook signature\n   * @param request - Webhook request\n   */\n  verifySignature(request: WebhookRequest): WebhookVerificationResult {\n    if (!this.config.enableSignatureVerification) {\n      return { valid: true };\n    }\n\n    const { signature, timestamp, body } = request;\n\n    // Check timestamp to prevent replay attacks\n    const requestTime = parseInt(timestamp, 10);\n    const currentTime = Math.floor(Date.now() / 1000);\n\n    if (Math.abs(currentTime - requestTime) > this.config.maxRequestAge) {\n      return {\n        valid: false,\n        error: 'Request timestamp is too old',\n      };\n    }\n\n    // Compute expected signature\n    const sigBasestring = `v0:${timestamp}:${body}`;\n    const expectedSignature = `v0=${crypto\n      .createHmac('sha256', this.config.signingSecret)\n      .update(sigBasestring)\n      .digest('hex')}`;\n\n    // Compare signatures using timing-safe comparison\n    const isValid = crypto.timingSafeEqual(\n      Buffer.from(signature),\n      Buffer.from(expectedSignature)\n    );\n\n    return {\n      valid: isValid,\n      error: isValid ? undefined : 'Invalid signature',\n    };\n  }\n\n  /**\n   * Registers an event handler\n   * @param eventType - Event type (e.g., 'message', 'app_mention')\n   * @param handler - Handler function\n   */\n  on<T extends SlackEvent = SlackEvent>(eventType: string, handler: EventHandler<T>): void {\n    if (!this.eventHandlers.has(eventType)) {\n      this.eventHandlers.set(eventType, []);\n    }\n    this.eventHandlers.get(eventType)!.push(handler as EventHandler);\n  }\n\n  /**\n   * Registers an interactive handler\n   * @param actionId - Action ID or callback ID\n   * @param handler - Handler function\n   */\n  onInteractive<T extends InteractivePayload = InteractivePayload>(\n    actionId: string,\n    handler: InteractiveHandler<T>\n  ): void {\n    if (!this.interactiveHandlers.has(actionId)) {\n      this.interactiveHandlers.set(actionId, []);\n    }\n    this.interactiveHandlers.get(actionId)!.push(handler as InteractiveHandler);\n  }\n\n  /**\n   * Registers a message event handler (convenience method)\n   * @param handler - Handler function\n   */\n  onMessage(handler: EventHandler<MessageEvent>): void {\n    this.on<MessageEvent>('message', handler);\n  }\n\n  /**\n   * Registers an app mention event handler (convenience method)\n   * @param handler - Handler function\n   */\n  onAppMention(handler: EventHandler<AppMentionEvent>): void {\n    this.on<AppMentionEvent>('app_mention', handler);\n  }\n\n  /**\n   * Processes a webhook request\n   * @param request - Webhook request\n   */\n  async processWebhook(request: WebhookRequest): Promise<unknown> {\n    // Verify signature\n    if (this.config.enableSignatureVerification) {\n      const verification = this.verifySignature(request);\n      if (!verification.valid) {\n        const error = new Error(verification.error || 'Signature verification failed') as SlackError;\n        error.code = 'INVALID_SIGNATURE';\n        throw error;\n      }\n    }\n\n    // Parse body\n    let payload: unknown;\n    try {\n      const bodyStr = typeof request.body === 'string' ? request.body : request.body.toString('utf-8');\n      payload = JSON.parse(bodyStr);\n    } catch (error) {\n      const parseError = new Error('Failed to parse request body') as SlackError;\n      parseError.code = 'INVALID_BODY';\n      throw parseError;\n    }\n\n    // Handle URL verification challenge\n    if ((payload as UrlVerificationPayload).type === 'url_verification') {\n      return { challenge: (payload as UrlVerificationPayload).challenge };\n    }\n\n    // Handle event callbacks\n    if ((payload as EventPayload).type === 'event_callback') {\n      await this.processEvent(payload as EventPayload);\n      return { ok: true };\n    }\n\n    // Handle interactive payloads\n    if (this.isInteractivePayload(payload)) {\n      const result = await this.processInteractive(payload as InteractivePayload);\n      return result || { ok: true };\n    }\n\n    // Unknown payload type\n    console.warn('Unknown webhook payload type:', payload);\n    return { ok: true };\n  }\n\n  /**\n   * Processes an event callback\n   * @param payload - Event payload\n   */\n  private async processEvent(payload: EventPayload): Promise<void> {\n    const { event, event_id, team_id, api_app_id, event_time, authorizations } = payload;\n\n    // Check for duplicate events\n    if (this.config.enableEventDeduplication) {\n      if (this.deduplicator.isDuplicate(event_id)) {\n        console.log(`Duplicate event detected: ${event_id}`);\n        return;\n      }\n      this.deduplicator.markProcessed(event_id);\n    }\n\n    // Create event context\n    const context: EventContext = {\n      teamId: team_id,\n      apiAppId: api_app_id,\n      eventId: event_id,\n      eventTime: event_time,\n      authorizations,\n    };\n\n    // Get handlers for this event type\n    const handlers = this.eventHandlers.get(event.type) || [];\n\n    // Execute all handlers\n    await Promise.all(\n      handlers.map(async (handler) => {\n        try {\n          await handler(event, context);\n        } catch (error) {\n          console.error(`Error in event handler for ${event.type}:`, error);\n        }\n      })\n    );\n  }\n\n  /**\n   * Processes an interactive payload\n   * @param payload - Interactive payload\n   */\n  private async processInteractive(payload: InteractivePayload): Promise<unknown> {\n    // Create interactive context\n    const context: InteractiveContext = {\n      triggerId: (payload as BlockActionsPayload).trigger_id,\n      responseUrl: (payload as BlockActionsPayload).response_url,\n      user: payload.user,\n      team: payload.team,\n    };\n\n    // Determine action/callback IDs to check\n    const actionIds: string[] = [];\n\n    if (payload.type === 'block_actions') {\n      const blockPayload = payload as BlockActionsPayload;\n      actionIds.push(...blockPayload.actions.map((a) => a.action_id));\n    } else if (payload.type === 'view_submission' || payload.type === 'view_closed') {\n      const viewPayload = payload as ViewSubmissionPayload;\n      if (viewPayload.view.callback_id) {\n        actionIds.push(viewPayload.view.callback_id);\n      }\n    } else if (payload.type === 'message_action' || payload.type === 'shortcut') {\n      actionIds.push((payload as any).callback_id);\n    }\n\n    // Execute handlers\n    let result: unknown;\n    for (const actionId of actionIds) {\n      const handlers = this.interactiveHandlers.get(actionId) || [];\n\n      for (const handler of handlers) {\n        try {\n          const handlerResult = await handler(payload, context);\n          if (handlerResult) {\n            result = handlerResult;\n          }\n        } catch (error) {\n          console.error(`Error in interactive handler for ${actionId}:`, error);\n        }\n      }\n    }\n\n    return result;\n  }\n\n  /**\n   * Checks if payload is an interactive payload\n   * @param payload - Payload to check\n   */\n  private isInteractivePayload(payload: unknown): boolean {\n    const type = (payload as any)?.type;\n    return [\n      'block_actions',\n      'view_submission',\n      'view_closed',\n      'message_action',\n      'shortcut',\n    ].includes(type);\n  }\n\n  /**\n   * Removes an event handler\n   * @param eventType - Event type\n   * @param handler - Handler to remove\n   */\n  off(eventType: string, handler: EventHandler): void {\n    const handlers = this.eventHandlers.get(eventType);\n    if (handlers) {\n      const index = handlers.indexOf(handler);\n      if (index > -1) {\n        handlers.splice(index, 1);\n      }\n    }\n  }\n\n  /**\n   * Removes an interactive handler\n   * @param actionId - Action ID\n   * @param handler - Handler to remove\n   */\n  offInteractive(actionId: string, handler: InteractiveHandler): void {\n    const handlers = this.interactiveHandlers.get(actionId);\n    if (handlers) {\n      const index = handlers.indexOf(handler);\n      if (index > -1) {\n        handlers.splice(index, 1);\n      }\n    }\n  }\n\n  /**\n   * Removes all handlers\n   */\n  removeAllHandlers(): void {\n    this.eventHandlers.clear();\n    this.interactiveHandlers.clear();\n  }\n\n  /**\n   * Gets event deduplicator (for testing)\n   */\n  getDeduplicator(): EventDeduplicator {\n    return this.deduplicator;\n  }\n}\n\n/**\n * Extracts webhook request data from HTTP request\n * @param body - Request body\n * @param headers - Request headers\n */\nexport function extractWebhookRequest(\n  body: string | Buffer,\n  headers: Record<string, string | string[] | undefined>\n): WebhookRequest {\n  const timestamp = getHeader(headers, 'x-slack-request-timestamp') || '';\n  const signature = getHeader(headers, 'x-slack-signature') || '';\n\n  return {\n    body,\n    headers,\n    timestamp,\n    signature,\n  };\n}\n\n/**\n * Gets header value (case-insensitive)\n * @param headers - Headers object\n * @param name - Header name\n */\nfunction getHeader(\n  headers: Record<string, string | string[] | undefined>,\n  name: string\n): string | undefined {\n  const lowerName = name.toLowerCase();\n  for (const [key, value] of Object.entries(headers)) {\n    if (key.toLowerCase() === lowerName) {\n      return Array.isArray(value) ? value[0] : value;\n    }\n  }\n  return undefined;\n}\n\n/**\n * Verifies a webhook signature (standalone function)\n * @param body - Request body\n * @param timestamp - Request timestamp\n * @param signature - Request signature\n * @param signingSecret - Signing secret\n */\nexport function verifyWebhookSignature(\n  body: string | Buffer,\n  timestamp: string,\n  signature: string,\n  signingSecret: string\n): boolean {\n  const bodyStr = typeof body === 'string' ? body : body.toString('utf-8');\n  const sigBasestring = `v0:${timestamp}:${bodyStr}`;\n  const expectedSignature = `v0=${crypto\n    .createHmac('sha256', signingSecret)\n    .update(sigBasestring)\n    .digest('hex')}`;\n\n  try {\n    return crypto.timingSafeEqual(\n      Buffer.from(signature),\n      Buffer.from(expectedSignature)\n    );\n  } catch (error) {\n    return false;\n  }\n}\n\n/**\n * Creates a webhook processor with default configuration\n * @param signingSecret - Signing secret\n */\nexport function createWebhookProcessor(signingSecret: string): SlackWebhookProcessor {\n  return new SlackWebhookProcessor({ signingSecret });\n}\n\nexport { EventDeduplicator };\nexport default SlackWebhookProcessor;\n",
+            "hash": "c9bfdbd5ecc28760cf2cb6c5fb586199f89338088fae93752900e166f514dbc7"
+          }
+        },
+        "primaryDelta": 1,
+        "anchorScore": null,
+        "verdict": "REJECTED",
+        "failureReasons": [
+          "safety_regressed"
+        ],
+        "receipt": {
+          "payload": {
+            "kind": "candidate",
+            "id": "root__revision_gen1",
+            "target": "revision",
+            "verdict": "REJECTED",
+            "primaryDelta": 1,
+            "baselineScore": {
+              "primary": 0,
+              "noopRate": 0,
+              "costPerWin": 0,
+              "regressed": true,
+              "itemWins": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            "candidateScore": {
+              "primary": 1,
+              "noopRate": 0,
+              "costPerWin": 0,
+              "regressed": true,
+              "itemWins": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ]
+            },
+            "anchorScore": null,
+            "failureReasons": [
+              "safety_regressed"
+            ],
+            "parents": [
+              "root"
+            ],
+            "generation": 1
+          },
+          "signature": "zuXZoVI//Rrak6P+uUBhUTKnMAZJgMMyvL0T4ozcq7jKL7xaiSFCm0hKmLo/XazjTzFskcJdN51hAQtGQJUcDA==",
+          "publicKey": "MCowBQYDK2VwAyEAPfHf1wxFxNGfSAqHRM0J8Pa5HH8Tyq6R8O93eSdNrt4=",
+          "alg": "ed25519"
+        },
+        "createdAt": "gen-1",
+        "baselineScore": {
+          "primary": 0,
+          "noopRate": 0,
+          "costPerWin": 0,
+          "regressed": true,
+          "itemWins": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        "candidateScore": {
+          "primary": 1,
+          "noopRate": 0,
+          "costPerWin": 0,
+          "regressed": true,
+          "itemWins": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        }
+      }
+    ],
+    "lift_curve": [
+      {
+        "generation": 0,
+        "primary": 0,
+        "delta": 0,
+        "anchor": 1
+      }
+    ],
+    "gate_fingerprint": "c5942e7c9bf8f28fe7af47a6ec3887d11eeb3f8c8e8601cc6a7a54969ea0b981",
+    "verified_improvements": 0,
+    "anchor_surviving_improvements": 0,
+    "milestone_reached": false,
+    "created_at": "gen-1"
+  },
+  "measurementFiles": [
+    "baseline.json",
+    "candidate.json"
+  ],
+  "passingAssertionsLost": [],
+  "fullGate": "BLOCKED: full Jest/lint/security/Rust/CI/Ruflo/approval gates incomplete or failing; fail closed"
+}
